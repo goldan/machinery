@@ -123,11 +123,14 @@ class IntFeature(BaseFeature):
 class LenFeature(IntFeature):
     """Feature which output value is length of data point."""
 
-    def _process(self, data_point):
-        """Feature evaluation step 2/4: process data_point.
+    def _postprocess(self, data_point):
+        """Feature evaluation step 3/4: postprocess feature value.
+
+        It's done in postprocess, so that it can be combined with
+        classes overriding process, e.g. AttributeFeature.
 
         Args:
-            data_point: data point whose feature is evaluated.
+            feature_value: feature evaluated value.
 
         Returns:
             length of data point.
@@ -146,15 +149,8 @@ class MaxFeature(IntFeature):
 
         Returns:
             max value of (iterable) data point.
-
-        Raises:
-            EvaluationError, if max(data_point) raises ValueError
-                (e.g. if data_point is not an iterable)
         """
-        try:
-            return max(data_point)
-        except ValueError:
-            raise EvaluationError
+        return max(data_point)
 
 
 class SumFeature(IntFeature):
@@ -168,15 +164,8 @@ class SumFeature(IntFeature):
 
         Returns:
             sum of (iterable) data point.
-
-        Raises:
-            EvaluationError, if sum(data_point) raises ValueError
-                (e.g. if data_point is not an iterable)
         """
-        try:
-            return sum(data_point)
-        except ValueError:
-            raise EvaluationError
+        return sum(data_point)
 
 
 class SetFeature(BaseFeature):
@@ -193,7 +182,10 @@ class Exists(BoolFeature):
 
 
 class AttributeFeature(BaseFeature):
-    """Base class for features evaluating object's attribute."""
+    """Base class for features evaluating object's attribute.
+
+    It is not meant to be instantiating directly, but only subclassed.
+    """
 
     attribute_name = None
 
