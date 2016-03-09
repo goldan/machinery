@@ -286,19 +286,19 @@ class SubAttributeStringTestCase(BaseSubAttributeTestCase):
     default_value = ''
 
 
-class make_list_of_values_features_LenTestCase(LenFeatureTestCase):
+class ListOfValuesFeaturesLenTestCase(LenFeatureTestCase):
     """Test list of values feature len evaluation."""
 
     feature = make_list_of_values_features(ListFeature)[0]
 
 
-class make_list_of_values_features_MaxTestCase(MaxFeatureTestCase):
+class ListOfValuesFeaturesMaxTestCase(MaxFeatureTestCase):
     """Test list of values feature max evaluation."""
 
     feature = make_list_of_values_features(ListFeature)[1]
 
 
-class make_list_of_values_features_SumTestCase(SumFeatureTestCase):
+class ListOfValuesFeaturesSumTestCase(SumFeatureTestCase):
     """Test list of values feature sum evaluation."""
 
     feature = make_list_of_values_features(ListFeature)[2]
