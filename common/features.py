@@ -23,10 +23,16 @@ class BaseFeature(Feature):
     default = None
     output_schema = None
 
-    def __init__(self):
-        """Set output_schema according to feature value_type."""
+    def __init__(self, name=None):
+        """Set output_schema according to feature value_type.
+
+        Args:
+            name: feature name to be set.
+        """
         if self.value_type:
             self.output_schema = Schema(self.value_type)
+        if name:
+            self._name = name
 
     def _preprocess(self, data_point):
         """Feature evaluation step 1/4: preprocess data_point.
@@ -150,7 +156,10 @@ class MaxFeature(IntFeature):
         Returns:
             max value of (iterable) data point.
         """
-        return max(data_point)
+        try:
+            return max(data_point)
+        except ValueError:
+            raise EvaluationError
 
 
 class SumFeature(IntFeature):
@@ -236,28 +245,3 @@ class AttributeLen(AttributeFeature, LenFeature):
     """Feature that evaluates object's attribute and outputs an length of it."""
 
     pass
-
-
-def to_binary(value):
-    """Transform value to 0/1 through bool."""
-    return int(bool(value))
-
-
-def to_len(value):
-    """Get length of value or 0 if it is False."""
-    return len(value) if value else 0
-
-
-def flatten_list(lst):
-    """Transform a 1-level nested list into a flat one.
-
-    Args:
-        lst: a nested list to transform.
-
-    Returns:
-        a flat list.
-
-    >>> flatten_list([[1, 2],[3, 4]])
-    >>> [1, 2, 3, 4]
-    """
-    return [item for sublist in lst for item in sublist]

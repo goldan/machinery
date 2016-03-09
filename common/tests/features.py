@@ -73,10 +73,10 @@ class MaxFeatureTestCase(BaseFeatureTestCase):
         'test_str': (u'abc', RAISES, ValueError),
         'test_bool': (True, RAISES, TypeError),
         'test_int': (5, RAISES, TypeError),
-        'test_empty': ('', RAISES, ValueError),
+        'test_empty': ('', EQ, 0),
         'test_none': (None, EQ, 0),
         'test_list': ([1, 2, 5], EQ, 5),
-        'test_list_empty': ([], RAISES, ValueError),
+        'test_list_empty': ([], EQ, 0),
     }
 
 
