@@ -5,9 +5,10 @@ from featureforge.validate import EQ, RAISES
 from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, AttributeString,
                                        BoolFeature, Exists, IntFeature,
-                                       LenFeature, MaxFeature, SetFeature,
-                                       StringFeature, SubAttributeString,
-                                       SumFeature)
+                                       LenFeature, ListFeature, MaxFeature,
+                                       SetFeature, StringFeature,
+                                       SubAttributeString, SumFeature,
+                                       make_list_of_values_features)
 from machinery.common.tests import BaseFeatureTestCase, create_obj
 
 
@@ -93,6 +94,22 @@ class SumFeatureTestCase(BaseFeatureTestCase):
         'test_none': (None, EQ, 0),
         'test_list': ([1, 2, 5], EQ, 8),
         'test_list_empty': ([], EQ, 0),
+    }
+
+
+class ListFeatureTestCase(BaseFeatureTestCase):
+    """Test ListFeature evaluation."""
+
+    feature = ListFeature()
+    fixtures = {
+        'test_str': (u'abc', EQ, ['a', 'b', 'c']),
+        'test_bool': (True, RAISES, TypeError),
+        'test_int': (5, RAISES, TypeError),
+        'test_empty': ('', EQ, []),
+        'test_none': (None, EQ, []),
+        'test_tuple': ((1, 2, 5), EQ, [1, 2, 5]),
+        'test_tuple_empty': ([], EQ, []),
+        'test_list': ([1, 2, 5], EQ, [1, 2, 5]),
     }
 
 
@@ -267,6 +284,24 @@ class SubAttributeStringTestCase(BaseSubAttributeTestCase):
     feature = SubAttributeString("myattr", "mysubattr")
     base_test_class = StringFeatureTestCase
     default_value = ''
+
+
+class make_list_of_values_features_LenTestCase(LenFeatureTestCase):
+    """Test list of values feature len evaluation."""
+
+    feature = make_list_of_values_features(ListFeature)[0]
+
+
+class make_list_of_values_features_MaxTestCase(MaxFeatureTestCase):
+    """Test list of values feature max evaluation."""
+
+    feature = make_list_of_values_features(ListFeature)[1]
+
+
+class make_list_of_values_features_SumTestCase(SumFeatureTestCase):
+    """Test list of values feature sum evaluation."""
+
+    feature = make_list_of_values_features(ListFeature)[2]
 
 
 if __name__ == "__main__":

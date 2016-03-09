@@ -177,6 +177,13 @@ class SumFeature(IntFeature):
         return sum(data_point)
 
 
+class ListFeature(BaseFeature):
+    """Feature which output value is a list."""
+
+    value_type = list
+    default = list()
+
+
 class SetFeature(BaseFeature):
     """Feature which output value is a set."""
 
@@ -285,3 +292,26 @@ class SubAttributeString(SubAttributeFeature, StringFeature):
     """Feature that evaluates object's subattribute and outputs a string."""
 
     pass
+
+
+def make_list_of_values_features(featurecls):
+    """Make features representing properties of a list of values.
+
+    Args:
+        featurecls: feature class evaluating to a list of values for a data point.
+
+    Returns:
+        list of instances of 3 feature classes, representing length of the list,
+        max value and sum of values.
+    """
+    name = str(featurecls.name)
+    class_name = name.capitalize()
+    # Len/Max/SumFeature classes should go first in parents,
+    # because the output value of the resulting feature is Int, so
+    # so its value_type should be taken from Len/Max/SumFeatures,
+    # not from featurecls (which outputs a list).
+    return [
+        type('%sLenFeature' % class_name, (LenFeature, featurecls), {'_name': '# ' + name})(),
+        type('%sMaxFeature' % class_name, (MaxFeature, featurecls), {'_name': 'max ' + name})(),
+        type('%sSumFeature' % class_name, (SumFeature, featurecls), {'_name': 'sum ' + name})(),
+    ]
