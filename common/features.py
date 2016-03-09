@@ -223,6 +223,40 @@ class AttributeFeature(BaseFeature):
             raise EvaluationError
 
 
+class SubAttributeFeature(AttributeFeature):
+    """Base class for features evaluating object's subattribute (nested attribute)."""
+
+    def __init__(self, attribute_name, subattribute_name):
+        """Set subattribute name and feature name including it.
+
+        Args:
+            attribute_name: name of an attribute of a data point.
+            subattribute_name: name of an (sub)attribute of the attribute of the data point.
+        """
+        super(SubAttributeFeature, self).__init__(attribute_name)
+        self.subattribute_name = subattribute_name
+        self._name += " " + subattribute_name
+
+    def _process(self, data_point):
+        """Get data_point object's subattribute value.
+
+        Args:
+            data_point: object whose feature is evaluated.
+
+        Returns:
+            subattribute value of the object.
+
+        Raises:
+            EvaluationError, if the object does not have the attribute,
+            or the attribute value does not have the subattribute.
+        """
+        attribute_value = super(SubAttributeFeature, self)._process(data_point)
+        try:
+            return getattr(attribute_value, self.subattribute_name)
+        except AttributeError:
+            raise EvaluationError
+
+
 class AttributeString(AttributeFeature, StringFeature):
     """Feature that evaluates object's attribute and outputs a string."""
 
@@ -243,5 +277,11 @@ class AttributeInt(AttributeFeature, IntFeature):
 
 class AttributeLen(AttributeFeature, LenFeature):
     """Feature that evaluates object's attribute and outputs an length of it."""
+
+    pass
+
+
+class SubAttributeString(SubAttributeFeature, StringFeature):
+    """Feature that evaluates object's subattribute and outputs a string."""
 
     pass

@@ -6,7 +6,8 @@ from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, AttributeString,
                                        BoolFeature, Exists, IntFeature,
                                        LenFeature, MaxFeature, SetFeature,
-                                       StringFeature, SumFeature)
+                                       StringFeature, SubAttributeString,
+                                       SumFeature)
 from machinery.common.tests import BaseFeatureTestCase
 
 
@@ -135,10 +136,15 @@ class BaseAttributeTestCase(BaseFeatureTestCase):
             It is used to reuse fixtures from.
         default_value: value that the feature is expected to have
             if attribute does not exist or object is None.
+        attribute_name: name of the attribute for fixtures.
+        other_attribute_name: some other name of an attribute
+            to check that only specified attribute is taken.
     """
 
     base_test_class = None
     default_value = None
+    attribute_name = "myattr"
+    other_attribute_name = "other_attr"
 
     @classmethod
     def setUpClass(cls):
@@ -163,10 +169,61 @@ class BaseAttributeTestCase(BaseFeatureTestCase):
         fixs = {}
         for key, values in self.base_test_class.fixtures.items():
             fixs[key + "_attr"] = (
-                type('myobj', (), {'myattr': values[0]})(),
+                type('myobj', (), {self.attribute_name: values[0]})(),
                 values[1], values[2])
-            fixs[key + "_other_attr"] = (
-                type('myobj', (), {'other_attr': values[0]})(),
+            fixs[key + "_attr_other"] = (
+                type('myobj', (), {self.other_attribute_name: values[0]})(),
+                EQ, self.default_value)
+            fixs['test_none'] = (None, EQ, self.default_value)
+        return fixs
+
+
+class BaseSubAttributeTestCase(BaseAttributeTestCase):
+    """Base class for testing SubAttributeFeature subclasses.
+
+    Attributes:
+        subattribute_name: name of the subattribute for fixtures.
+        other_subattribute_name: some other name of a subattribute
+            to check that only specified subattribute is taken.
+    """
+
+    subattribute_name = "mysubattr"
+    other_subattribute_name = "other_subattr"
+
+    @classmethod
+    def setUpClass(cls):
+        """Skip testing this very class, because it's a base 'abstract' class."""
+        if cls is BaseSubAttributeTestCase:
+            raise unittest.SkipTest("Skip BaseSubAttributeTestCase tests, it's a base class")
+        super(BaseSubAttributeTestCase, cls).setUpClass()
+
+    @property
+    def fixtures(self):
+        """Generate fixtures for testing.
+
+        * take fixtures of the base_test_class and test them against an object
+            having a single attribute and subattribute and values from the fixtures.
+        * take the same fixtures and test against an object having
+            the same attribute but a different subattribute and values from the fixtures.
+        * take the same fixtures and test against an object having
+            a different attribute and values from the fixtures.
+        * test against None object.
+
+        Returns:
+            dictionary of tuples with fixtures.
+        """
+        fixs = {}
+        for key, values in self.base_test_class.fixtures.items():
+            fixs[key + "_attr"] = (
+                type('myobj', (), {self.attribute_name: type('mysubobj', (), {
+                    self.subattribute_name: values[0]})()})(),
+                values[1], values[2])
+            fixs[key + "_attr_other_sub"] = (
+                type('myobj', (), {self.attribute_name: type('mysubobj', (), {
+                    self.other_subattribute_name: values[0]})()})(),
+                EQ, self.default_value)
+            fixs[key + "_attr_other"] = (
+                type('myobj', (), {self.other_attribute_name: values[0]})(),
                 EQ, self.default_value)
             fixs['test_none'] = (None, EQ, self.default_value)
         return fixs
@@ -202,6 +259,14 @@ class AttributeLenTestCase(BaseAttributeTestCase):
     feature = AttributeLen("myattr")
     base_test_class = LenFeatureTestCase
     default_value = 0
+
+
+class SubAttributeStringTestCase(BaseSubAttributeTestCase):
+    """Test SubAttributeString evaluation."""
+
+    feature = SubAttributeString("myattr", "mysubattr")
+    base_test_class = StringFeatureTestCase
+    default_value = ''
 
 
 if __name__ == "__main__":
