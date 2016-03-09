@@ -8,7 +8,7 @@ from machinery.common.features import (AttributeBool, AttributeInt,
                                        LenFeature, MaxFeature, SetFeature,
                                        StringFeature, SubAttributeString,
                                        SumFeature)
-from machinery.common.tests import BaseFeatureTestCase
+from machinery.common.tests import BaseFeatureTestCase, create_obj
 
 
 class StringFeatureTestCase(BaseFeatureTestCase):
@@ -169,10 +169,10 @@ class BaseAttributeTestCase(BaseFeatureTestCase):
         fixs = {}
         for key, values in self.base_test_class.fixtures.items():
             fixs[key + "_attr"] = (
-                type('myobj', (), {self.attribute_name: values[0]})(),
+                create_obj({self.attribute_name: values[0]}),
                 values[1], values[2])
             fixs[key + "_attr_other"] = (
-                type('myobj', (), {self.other_attribute_name: values[0]})(),
+                create_obj({self.other_attribute_name: values[0]}),
                 EQ, self.default_value)
             fixs['test_none'] = (None, EQ, self.default_value)
         return fixs
@@ -215,15 +215,15 @@ class BaseSubAttributeTestCase(BaseAttributeTestCase):
         fixs = {}
         for key, values in self.base_test_class.fixtures.items():
             fixs[key + "_attr"] = (
-                type('myobj', (), {self.attribute_name: type('mysubobj', (), {
-                    self.subattribute_name: values[0]})()})(),
+                create_obj({self.attribute_name:
+                            create_obj({self.subattribute_name: values[0]}, 'mysubobj')}),
                 values[1], values[2])
             fixs[key + "_attr_other_sub"] = (
-                type('myobj', (), {self.attribute_name: type('mysubobj', (), {
-                    self.other_subattribute_name: values[0]})()})(),
+                create_obj({self.attribute_name:
+                            create_obj({self.other_subattribute_name: values[0]}, 'mysubobj')}),
                 EQ, self.default_value)
             fixs[key + "_attr_other"] = (
-                type('myobj', (), {self.other_attribute_name: values[0]})(),
+                create_obj({self.other_attribute_name: values[0]}),
                 EQ, self.default_value)
             fixs['test_none'] = (None, EQ, self.default_value)
         return fixs

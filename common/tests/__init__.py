@@ -25,3 +25,16 @@ class BaseFeatureTestCase(unittest.TestCase, FeatureFixtureCheckMixin):
     def test_fixtures(self):
         """Test fixtures defined in self.fixtures."""
         self.assert_feature_passes_fixture(self.feature, self.fixtures)
+
+
+def create_obj(attribute_dict, name='myobj'):
+    """Create an object() subclass instance with specified attributes.
+
+    Args:
+        attribute_dict: dict of attributes and values for the object.
+        name: class name for the class implicitly created.
+
+    Returns:
+        instance of the newly created class (named @name) with specified attributes.
+    """
+    return type(name, (), attribute_dict)()
