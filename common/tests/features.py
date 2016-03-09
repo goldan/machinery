@@ -62,7 +62,7 @@ class LenFeatureTestCase(BaseFeatureTestCase):
         'test_int': (5, RAISES, TypeError),
         'test_empty': ('', EQ, 0),
         'test_none': (None, EQ, 0),
-        'test_list': ([1, 2, 5], EQ, 3),
+        'test_list': ([1, 2, 5, 0], EQ, 4),
         'test_list_empty': ([], EQ, 0),
     }
 
@@ -77,7 +77,7 @@ class MaxFeatureTestCase(BaseFeatureTestCase):
         'test_int': (5, RAISES, TypeError),
         'test_empty': ('', EQ, 0),
         'test_none': (None, EQ, 0),
-        'test_list': ([1, 2, 5], EQ, 5),
+        'test_list': ([1, 2, 5, 0], EQ, 5),
         'test_list_empty': ([], EQ, 0),
     }
 
@@ -92,7 +92,7 @@ class SumFeatureTestCase(BaseFeatureTestCase):
         'test_int': (5, RAISES, TypeError),
         'test_empty': ('', EQ, 0),
         'test_none': (None, EQ, 0),
-        'test_list': ([1, 2, 5], EQ, 8),
+        'test_list': ([1, 2, 5, 0], EQ, 8),
         'test_list_empty': ([], EQ, 0),
     }
 
