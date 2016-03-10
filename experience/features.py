@@ -1,26 +1,19 @@
 """Feature classes for Candidate experience classification."""
 import copy
-import os
 import string
 from itertools import product
 from types import MethodType
 
-import django
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 
+from machinery.common.atlas import (GENDER_MALE, PROFILE_TYPES_BY_TYPE_ID,
+                                    Organization)
 from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, BoolFeature, ListFeature,
                                        SetFeature, SubAttributeString,
                                        make_list_of_values_features)
-
-os.environ["DJANGO_SETTINGS_MODULE"] = "atlas_project.global.settings"
-django.setup()
-
-from atlas_project.candidate.models import Organization
-from atlas_project.candidate.profile_defs import (GENDER_MALE,
-                                                  PROFILE_TYPES_BY_TYPE_ID)
 
 
 class Gender(AttributeBool):

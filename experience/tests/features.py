@@ -8,8 +8,7 @@ already tested in common.tests.
 import unittest
 
 from featureforge.validate import EQ
-
-from atlas_project.candidate.profile_defs import PROFILE_TYPES_BY_TYPE_ID
+from machinery.common.atlas import PROFILE_TYPES_BY_TYPE_ID
 from machinery.common.tests import create_obj as obj
 from machinery.common.tests import BaseFeatureTestCase
 from machinery.common.tests.features import BaseAttributeTestCase
