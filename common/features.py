@@ -304,7 +304,7 @@ def make_list_of_values_features(featurecls):
         list of instances of 3 feature classes, representing length of the list,
         max value and sum of values.
     """
-    name = str(featurecls.name)
+    name = str(featurecls().name)
     class_name = name.capitalize()
     # Len/Max/SumFeature classes should go first in parents,
     # because the output value of the resulting feature is Int, so
