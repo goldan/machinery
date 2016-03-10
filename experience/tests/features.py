@@ -6,9 +6,11 @@ already tested in common.tests.
 """
 
 import unittest
+from StringIO import StringIO
 
 from featureforge.validate import EQ
 from machinery.common.atlas import PROFILE_TYPES_BY_TYPE_ID
+from machinery.common.features import AttributeBool
 from machinery.common.tests import create_obj as obj
 from machinery.common.tests import BaseFeatureTestCase
 from machinery.common.tests.features import BaseAttributeTestCase
@@ -127,7 +129,6 @@ class MakeCandidateFeaturesLocationExistsTestCase(BaseFeatureTestCase):
     """Test evaluation of candidate location exists feature."""
 
     type_id = PROFILE_TYPES_BY_TYPE_ID.keys()[0]
-    feature = make_candidate_features([LocationExists()])[0]
     fixtures = {
         'test_location_exists': (candidate(location=obj(city='New York')),
                                  EQ, True),
@@ -143,11 +144,37 @@ class MakeCandidateFeaturesLocationExistsTestCase(BaseFeatureTestCase):
         'test_none': (None, EQ, False),
     }
 
+    @property
+    def feature(self):
+        """Get feature object to test."""
+        return make_candidate_features([LocationExists()])[0]
+
+
+class MakeCandidateFeaturesAttributeBoolTestCase(BaseFeatureTestCase):
+    """Test evaluation of candidate attribute bool feature."""
+
+    type_id = PROFILE_TYPES_BY_TYPE_ID.keys()[0]
+    fixtures = {
+        'test_true': (candidate(fake=True), EQ, True),
+        'test_false': (candidate(fake=False), EQ, False),
+        'test_no': (candidate(), EQ, False),
+        'test_empty': (candidate(fake=''), EQ, False),
+        'test_other_prof': (candidate(fake=True, type_id=type_id+1), EQ, False),
+        'test_other_attr': (candidate(otherattr=True), EQ, False),
+        'test_none': (None, EQ, False),
+    }
+
+    @property
+    def feature(self):
+        """Get feature object to test."""
+        return make_candidate_features([AttributeBool("fake")])[0]
+
 
 class OrganizationNamesTestCase(BaseFeatureTestCase):
     """Test evaluation of candidate organization names feature."""
 
-    feature = OrganizationNames(set(["google", "facebook", "amazon"]))
+    feature = OrganizationNames(StringIO("\n".join(
+        ("google, 150", "facebook, 120", "amazon, 110", "yandex, 50"))))
     fixtures = {
         'test_base': (obj(profiles=[
             obj(type_id=0, organizations=[
@@ -177,7 +204,8 @@ class OrganizationNamesTestCase(BaseFeatureTestCase):
 class JobTitlesWordsTestCase(BaseFeatureTestCase):
     """Test evaluation of candidate job titles words feature."""
 
-    feature = JobTitlesWords(set(["software", "engineer", "manager"]))
+    feature = JobTitlesWords(StringIO("\n".join(
+        ("software, 150", "engineer, 120", "manager, 110", "ceo, 50"))))
     fixtures = {
         'test_base': (obj(profiles=[
             obj(type_id=0, organizations=[

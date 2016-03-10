@@ -1,6 +1,9 @@
 """Feature classes for Candidate experience classification."""
 import copy
+import csv
 import string
+import sys
+from argparse import ArgumentParser
 from itertools import product
 from types import MethodType
 
@@ -9,11 +12,12 @@ from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from machinery.common.atlas import (GENDER_MALE, PROFILE_TYPES_BY_TYPE_ID,
-                                    Organization)
+                                    Candidate, Organization)
 from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, BoolFeature, ListFeature,
                                        SetFeature, SubAttributeString,
                                        make_list_of_values_features)
+from machinery.common.utils import CSV_OPTIONS, writerow
 
 
 class Gender(AttributeBool):
@@ -200,10 +204,28 @@ class OrganizationNames(SetFeature):
         organizations: set of popular organization names to search for in the profiles.
     """
 
-    def __init__(self, organizations):
-        """Store organizations to search for."""
+    def __init__(self, org_popularity_file, org_popularity_threshold=100):
+        """Store organizations to search for.
+
+        Args:
+            org_popularity_file: file descriptor with organization names popularity table.
+            org_popularity_threshold: number of times organization needs to appear in jobs
+                to be included as a separate feature
+        """
         super(OrganizationNames, self).__init__()
-        self.organizations = organizations
+        self.load_organizations(org_popularity_file, org_popularity_threshold)
+
+    def load_organizations(self, org_popularity_file, threshold):
+        """Load organization names to search for.
+
+        Args:
+            org_popularity_file: file descriptor with organization names popularity table.
+            threshold: number of times organization needs to appear in jobs
+                to be included as a separate feature.
+        """
+        reader = csv.reader(org_popularity_file, **CSV_OPTIONS)
+        self.organizations = set([row[0].decode('utf8') for row in reader if
+                                  int(row[1]) > threshold])
 
     def _process(self, candidate):
         """Get set of given organizations names occuring in the candidate profiles.
@@ -232,10 +254,28 @@ class JobTitlesWords(SetFeature):
         job_titles_words: set of popular job title words to search for in the profiles.
     """
 
-    def __init__(self, job_titles_words):
-        """Store job titles words to search for."""
+    def __init__(self, words_popularity_file, words_popularity_threshold=100):
+        """Store job title words to search for.
+
+        Args:
+            words_popularity_file: file descriptor with job title words popularity table.
+            words_popularity_threshold: number of times a job title word must appear in jobs
+                to be included as a separate feature.
+        """
         super(JobTitlesWords, self).__init__()
-        self.job_titles_words = job_titles_words
+        self.load_job_title_words(words_popularity_file, words_popularity_threshold)
+
+    def load_job_title_words(self, words_popularity_file, threshold):
+        """Load job title words to search for.
+
+        Args:
+            words_popularity_file: file descriptor with job title words popularity table.
+            threshold: number of times a word needs to appear in jobs
+                to be included as a separate feature.
+        """
+        reader = csv.reader(words_popularity_file, **CSV_OPTIONS)
+        self.job_titles_words = set([row[0].decode('utf8') for row in reader if
+                                     int(row[1]) > threshold])
 
     def _process(self, candidate):
         """Get set of given job titles words occuring in the candidate profiles.
@@ -275,7 +315,7 @@ def make_candidate_feature(profile_feature, profile_type_id):
     feature._name = "%s %s" % (PROFILE_TYPES_BY_TYPE_ID[profile_type_id].display_name,
                                profile_feature.name)
 
-    def _postprocess(self, candidate, profile_feature=profile_feature, type_id=profile_type_id):
+    def _evaluate(self, candidate, profile_feature=profile_feature, type_id=profile_type_id):
         """Evaluate the candidate feature using underlying profile feature.
 
         Args:
@@ -286,12 +326,14 @@ def make_candidate_feature(profile_feature, profile_type_id):
         Returns:
             evaluation of the feature for the given profile.
         """
+        if not getattr(candidate, "profiles", None):
+            return profile_feature.default
         profiles = dict((profile.type_id, profile) for profile in candidate.profiles
                         if hasattr(profile, "type_id"))
         profile = profiles.get(type_id)
         return profile_feature._evaluate(profile)
 
-    feature._postprocess = MethodType(_postprocess, feature)
+    feature._evaluate = MethodType(_evaluate, feature)
     return feature
 
 
@@ -309,7 +351,7 @@ def make_candidate_features(profile_features):
             for type_id, profile_feature in product(PROFILE_TYPES_BY_TYPE_ID, profile_features)]
 
 
-def get_features(popular_organizations, popular_job_titles_words):
+def get_features(org_popularity_file, job_words_popularity_file):
     """Get a list of all features for candidates.
 
     It includes:
@@ -318,9 +360,8 @@ def get_features(popular_organizations, popular_job_titles_words):
         * features aggregated from profiles (organization names, job titles words).
 
     Args:
-        popular_organizations: list of (normalized) organization names.
-        popular_job_titles_words: list of (normalized) words that
-            occur in job titles.
+        org_popularity_file: file descriptor with organization names popularity table.
+        job_words_popularity_file: file descriptor with job title words popularity table.
 
     Returns:
         tuple of all candidates feature instances.
@@ -356,11 +397,70 @@ def get_features(popular_organizations, popular_job_titles_words):
     candidate_profile_features = make_candidate_features(profile_features)
 
     candidate_aggregated_features = [
-        OrganizationNames(popular_organizations),
-        JobTitlesWords(popular_job_titles_words)]
+        OrganizationNames(org_popularity_file),
+        JobTitlesWords(job_words_popularity_file)]
 
     features = (candidates_base_features +
                 candidate_profile_features +
                 candidate_aggregated_features)
 
     return features
+
+
+def export_features(options):
+    """Export feature values for candidates to a csv file.
+
+    Take candidates classified by humans.
+
+    Args:
+        options: command-line options object.
+            See main() docstring for description of them.
+    """
+    with open(options.output_filename, "wb") as fout, \
+            open(options.popular_organizations_filename, "rb") as popular_organizations_file, \
+            open(options.popular_job_title_words_filename, "rb") as popular_job_title_words_file:
+        features = get_features(popular_organizations_file, popular_job_title_words_file)
+        writer = csv.writer(fout, **CSV_OPTIONS)
+        candidates = Candidate.objects.filter(experience__exists=True,
+                                              experience__classifier_category='H')
+        if options.limit:
+            candidates = candidates[:options.limit]
+        i = 0
+        for candidate in candidates:
+            if not i:
+                headers = [feature.name for feature in features]
+                writerow(writer, headers)
+            values = []
+            for feature in features:
+                values.append(feature(candidate))
+            writerow(writer, values)
+            i += 1
+            print "\r%d" % i,
+
+
+def main():
+    """Function that is executed when a file is called from CLI.
+
+    CLI arguments:
+        popular_organizations_filename: name of file containing
+            organizations popularity table.
+        popular_job_title_words_filename: name of file containing
+            job titles popularity table.
+        output_filename: name of csv file to export features to.
+        limit: (optional) number of candidates to export features for.
+    """
+    parser = ArgumentParser()
+    parser.add_argument('--org-names-file', dest='popular_organizations_filename', type=str)
+    parser.add_argument('--job-titles-file', dest='popular_job_title_words_filename', type=str)
+    parser.add_argument('--output', dest='output_filename', type=str)
+    parser.add_argument('--limit', dest='limit', type=int)
+    options = parser.parse_args()
+    export_features(options)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+    sys.exit(0)
