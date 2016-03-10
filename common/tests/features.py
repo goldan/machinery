@@ -186,10 +186,10 @@ class BaseAttributeTestCase(BaseFeatureTestCase):
         fixs = {}
         for key, values in self.base_test_class.fixtures.items():
             fixs[key + "_attr"] = (
-                create_obj({self.attribute_name: values[0]}),
+                create_obj(**{self.attribute_name: values[0]}),
                 values[1], values[2])
             fixs[key + "_attr_other"] = (
-                create_obj({self.other_attribute_name: values[0]}),
+                create_obj(**{self.other_attribute_name: values[0]}),
                 EQ, self.default_value)
             fixs['test_none'] = (None, EQ, self.default_value)
         return fixs
@@ -232,15 +232,17 @@ class BaseSubAttributeTestCase(BaseAttributeTestCase):
         fixs = {}
         for key, values in self.base_test_class.fixtures.items():
             fixs[key + "_attr"] = (
-                create_obj({self.attribute_name:
-                            create_obj({self.subattribute_name: values[0]}, 'mysubobj')}),
+                create_obj(**{self.attribute_name:
+                              create_obj(name='mysubobj',
+                                         **{self.subattribute_name: values[0]})}),
                 values[1], values[2])
             fixs[key + "_attr_other_sub"] = (
-                create_obj({self.attribute_name:
-                            create_obj({self.other_subattribute_name: values[0]}, 'mysubobj')}),
+                create_obj(**{self.attribute_name:
+                              create_obj(name='mysubobj',
+                                         **{self.other_subattribute_name: values[0]})}),
                 EQ, self.default_value)
             fixs[key + "_attr_other"] = (
-                create_obj({self.other_attribute_name: values[0]}),
+                create_obj(**{self.other_attribute_name: values[0]}),
                 EQ, self.default_value)
             fixs['test_none'] = (None, EQ, self.default_value)
         return fixs

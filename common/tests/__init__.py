@@ -27,7 +27,7 @@ class BaseFeatureTestCase(unittest.TestCase, FeatureFixtureCheckMixin):
         self.assert_feature_passes_fixture(self.feature, self.fixtures)
 
 
-def create_obj(attribute_dict, name='myobj'):
+def create_obj(**kwargs):
     """Create an object() subclass instance with specified attributes.
 
     Args:
@@ -37,4 +37,5 @@ def create_obj(attribute_dict, name='myobj'):
     Returns:
         instance of the newly created class (named @name) with specified attributes.
     """
-    return type(name, (), attribute_dict)()
+    name = kwargs.pop("name", "myobj")
+    return type(name, (), kwargs)()
