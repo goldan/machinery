@@ -37,5 +37,5 @@ def create_obj(**kwargs):
     Returns:
         instance of the newly created class (named @name) with specified attributes.
     """
-    name = kwargs.pop("name", "myobj")
-    return type(name, (), kwargs)()
+    clsname = kwargs.pop("_clsname", "myobj")
+    return type(clsname, (), kwargs)()

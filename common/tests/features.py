@@ -233,12 +233,12 @@ class BaseSubAttributeTestCase(BaseAttributeTestCase):
         for key, values in self.base_test_class.fixtures.items():
             fixs[key + "_attr"] = (
                 create_obj(**{self.attribute_name:
-                              create_obj(name='mysubobj',
+                              create_obj(_clsname='mysubobj',
                                          **{self.subattribute_name: values[0]})}),
                 values[1], values[2])
             fixs[key + "_attr_other_sub"] = (
                 create_obj(**{self.attribute_name:
-                              create_obj(name='mysubobj',
+                              create_obj(_clsname='mysubobj',
                                          **{self.other_subattribute_name: values[0]})}),
                 EQ, self.default_value)
             fixs[key + "_attr_other"] = (
