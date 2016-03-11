@@ -5,6 +5,7 @@ import pickle
 import string
 import sys
 from argparse import ArgumentParser
+from collections import OrderedDict
 from itertools import product
 from types import MethodType
 
@@ -14,7 +15,8 @@ from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from machinery.common.atlas import (GENDER_MALE, PROFILE_TYPES_BY_TYPE_ID,
-                                    Candidate, Organization)
+                                    Candidate, CandidateExperienceClass,
+                                    Organization)
 from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, BoolFeature, ListFeature,
                                        SetFeature, SubAttributeSet,
@@ -409,24 +411,21 @@ def get_features(org_popularity_file, job_words_popularity_file):
     return features
 
 
-def export_features(options):
+def export_features(candidates, options):
     """Export feature values for candidates to a csv or binary file.
 
     Take candidates classified by humans.
 
     Args:
+        candidates: list of candidates to export features for.
         options: command-line options object.
             See main() docstring for description of them.
     """
-    with open(options.output_filename, "wb") as fout, \
+    with open(options.output_features_filename, "wb") as fout, \
             open(options.popular_organizations_filename, "rb") as popular_organizations_file, \
             open(options.popular_job_title_words_filename, "rb") as popular_job_title_words_file:
         features = get_features(popular_organizations_file, popular_job_title_words_file)
         writer = csv.writer(fout, **CSV_OPTIONS)
-        candidates = Candidate.objects.filter(experience__exists=True,
-                                              experience__classifier_category='H')
-        if options.limit:
-            candidates = candidates[:options.limit]
         i = 0
         vectorizer = Vectorizer(features, sparse=not options.verbose)
         vectorizer.fit(candidates)
@@ -446,6 +445,24 @@ def export_features(options):
             pickle.dump(values, fout)
 
 
+def export_classes(candidates, filename):
+    """Export experience classes codes for candidates to a csv file.
+
+    Take candidates classified by humans.
+
+    Args:
+        candidates: list of candidates to export features for.
+        filename: name of file to export classes to.
+    """
+    with open(filename, "wb") as fout:
+        writer = csv.writer(fout, **CSV_OPTIONS)
+        writerow(writer, ["Experience class"])
+        for candidate in candidates:
+            experience = OrderedDict(CandidateExperienceClass.CLASS_CHOICES).keys().index(
+                candidate.experience.code)
+            writerow(writer, [experience])
+
+
 def main():
     """Function that is executed when a file is called from CLI.
 
@@ -462,11 +479,17 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--org-names-file', dest='popular_organizations_filename', type=str)
     parser.add_argument('--job-titles-file', dest='popular_job_title_words_filename', type=str)
-    parser.add_argument('--output', dest='output_filename', type=str)
+    parser.add_argument('--output-x', dest='output_features_filename', type=str)
+    parser.add_argument('--output-y', dest='output_class_filename', type=str)
     parser.add_argument('--limit', dest='limit', type=int)
     parser.add_argument('--verbose', dest='verbose', type=bool)
     options = parser.parse_args()
-    export_features(options)
+    candidates = Candidate.objects.filter(experience__exists=True,
+                                          experience__classifier_category='H')
+    if options.limit:
+        candidates = candidates[:options.limit]
+    export_features(candidates, options)
+    export_classes(candidates, options.output_class_filename)
 
 
 if __name__ == "__main__":
