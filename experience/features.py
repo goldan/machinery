@@ -1,12 +1,14 @@
 """Feature classes for Candidate experience classification."""
 import copy
 import csv
+import pickle
 import string
 import sys
 from argparse import ArgumentParser
 from itertools import product
 from types import MethodType
 
+from featureforge.vectorizer import Vectorizer
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -15,7 +17,7 @@ from machinery.common.atlas import (GENDER_MALE, PROFILE_TYPES_BY_TYPE_ID,
                                     Candidate, Organization)
 from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, BoolFeature, ListFeature,
-                                       SetFeature, SubAttributeString,
+                                       SetFeature, SubAttributeSet,
                                        make_list_of_values_features)
 from machinery.common.utils import CSV_OPTIONS, writerow
 
@@ -381,9 +383,9 @@ def get_features(org_popularity_file, job_words_popularity_file):
         AttributeBool("bio"),
         AttributeBool("url"),
         LocationExists(),
-        SubAttributeString("location", "country"),
-        SubAttributeString("location", "state"),
-        SubAttributeString("location", "city"),
+        SubAttributeSet("location", "country"),
+        SubAttributeSet("location", "state"),
+        SubAttributeSet("location", "city"),
         AttributeLen("organizations"),
         AttributeLen("websites"),
         AttributeLen("chats"),
@@ -408,7 +410,7 @@ def get_features(org_popularity_file, job_words_popularity_file):
 
 
 def export_features(options):
-    """Export feature values for candidates to a csv file.
+    """Export feature values for candidates to a csv or binary file.
 
     Take candidates classified by humans.
 
@@ -426,16 +428,22 @@ def export_features(options):
         if options.limit:
             candidates = candidates[:options.limit]
         i = 0
-        for candidate in candidates:
-            if not i:
-                headers = [feature.name for feature in features]
-                writerow(writer, headers)
-            values = []
-            for feature in features:
-                values.append(feature(candidate))
-            writerow(writer, values)
-            i += 1
-            print "\r%d" % i,
+        vectorizer = Vectorizer(features, sparse=not options.verbose)
+        vectorizer.fit(candidates)
+        values = vectorizer.transform(candidates)
+        if options.verbose:
+            headers = []
+            for i in range(values[0].shape[0]):
+                feature, info = vectorizer.column_to_feature(i)
+                header = feature.name + ((" " + info) if info else "")
+                headers.append(header)
+            writerow(writer, headers)
+            for row in values:
+                writerow(writer, row)
+                i += 1
+                print "\r%d" % i,
+        else:
+            pickle.dump(values, fout)
 
 
 def main():
@@ -446,14 +454,17 @@ def main():
             organizations popularity table.
         popular_job_title_words_filename: name of file containing
             job titles popularity table.
-        output_filename: name of csv file to export features to.
+        output_filename: name of file to export features to.
         limit: (optional) number of candidates to export features for.
+        verbose: if set, export human-readable csv; otherwise export binary pickled sparse matrix
+            which is faster to process by classification algorithms.
     """
     parser = ArgumentParser()
     parser.add_argument('--org-names-file', dest='popular_organizations_filename', type=str)
     parser.add_argument('--job-titles-file', dest='popular_job_title_words_filename', type=str)
     parser.add_argument('--output', dest='output_filename', type=str)
     parser.add_argument('--limit', dest='limit', type=int)
+    parser.add_argument('--verbose', dest='verbose', type=bool)
     options = parser.parse_args()
     export_features(options)
 
