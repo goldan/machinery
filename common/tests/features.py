@@ -7,7 +7,8 @@ from machinery.common.features import (AttributeBool, AttributeInt,
                                        BoolFeature, Exists, IntFeature,
                                        LenFeature, ListFeature, MaxFeature,
                                        SetFeature, StringFeature,
-                                       SubAttributeString, SumFeature,
+                                       SubAttributeSet, SubAttributeString,
+                                       SumFeature,
                                        make_list_of_values_features)
 from machinery.common.tests import BaseFeatureTestCase, create_obj
 
@@ -118,9 +119,9 @@ class SetFeatureTestCase(BaseFeatureTestCase):
 
     feature = SetFeature()
     fixtures = {
-        'test_str': (u'abc', EQ, set(['a', 'b', 'c'])),
-        'test_bool': (True, RAISES, TypeError),
-        'test_int': (5, RAISES, TypeError),
+        'test_str': (u'abc', EQ, set(['abc'])),
+        'test_bool': (True, EQ, set([True])),
+        'test_int': (5, EQ, set([5])),
         'test_empty': ('', EQ, set()),
         'test_none': (None, EQ, set()),
         'test_list': ([1, 2, 5], EQ, set([1, 2, 5])),
@@ -286,6 +287,14 @@ class SubAttributeStringTestCase(BaseSubAttributeTestCase):
     feature = SubAttributeString("myattr", "mysubattr")
     base_test_class = StringFeatureTestCase
     default_value = ''
+
+
+class SubAttributeSetTestCase(BaseSubAttributeTestCase):
+    """Test SubAttributeSet evaluation."""
+
+    feature = SubAttributeSet("myattr", "mysubattr")
+    base_test_class = SetFeatureTestCase
+    default_value = set()
 
 
 class ListOfValuesFeaturesLenTestCase(LenFeatureTestCase):

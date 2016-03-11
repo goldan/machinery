@@ -190,6 +190,25 @@ class SetFeature(BaseFeature):
     value_type = set
     default = set()
 
+    def _postprocess(self, value):
+        """Feature evaluation step 3/4: postprocess feature value.
+
+        Args:
+            value: feature evaluated value.
+
+        Returns:
+            If a value is not a set, make a set of one element (the value).
+            If a value is an empty string, do not add it to the set,
+            otherwise it will be used as a empty value in bag-of-words.
+        """
+        if value == '':
+            value = set()
+        elif isinstance(value, list):
+            value = set(value)
+        elif not isinstance(value, set):
+            value = set([value])
+        return value
+
 
 class Exists(BoolFeature):
     """Feature which checks that data_point evaluates to True."""
@@ -290,6 +309,12 @@ class AttributeLen(AttributeFeature, LenFeature):
 
 class SubAttributeString(SubAttributeFeature, StringFeature):
     """Feature that evaluates object's subattribute and outputs a string."""
+
+    pass
+
+
+class SubAttributeSet(SubAttributeFeature, SetFeature):
+    """Feature that evaluates object's subattribute and outputs a set."""
 
     pass
 
