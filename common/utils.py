@@ -13,3 +13,16 @@ def writerow(writer, row):
         row: list of values to write.
     """
     writer.writerow([unicode(value).encode('utf8') for value in row])
+
+
+def roundto(value, digits=3):
+    """Round value to specified number of digits.
+
+    Args:
+        value: value to round.
+        digits: number of digits to round to.
+
+    Returns:
+        rounded value.
+    """
+    return round(value, digits)
