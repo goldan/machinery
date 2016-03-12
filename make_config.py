@@ -14,6 +14,7 @@ Options:
 import json
 import random
 import sys
+from collections import OrderedDict
 from itertools import product
 import pandas
 
@@ -38,25 +39,22 @@ def make_config():
     data = pandas.read_csv(options["<features.csv>"])
     config = []
     for classifier, scaling in product(classifiers, feature_scaling_options):
-        config.append({
-            "features": {
-                "filename": options["<features.csv>"],
-                "names": sorted(data.columns),
-                "count": len(data.columns),
-                "scaling": scaling
-            },
-            "classes": {
-                "filename": options[u"<classes.csv>"],
-                "names": class_names
-            },
-            "classifier": {
-                "name": classifier,
-                "config": {
-                    "random_state": random_state
-                }
-            },
-            "verbose": verbose
-        })
+        dct = OrderedDict()
+        dct["classifier"] = OrderedDict((
+            ("name", classifier),
+            ("config", {
+                "random_state": random_state
+            })))
+        dct["classes"] = OrderedDict((
+            ("filename", options[u"<classes.csv>"]),
+            ("names", class_names)))
+        dct["features"] = OrderedDict((
+            ("scaling", scaling),
+            ("count", len(data.columns)),
+            ("filename", options["<features.csv>"]),
+            ("names", sorted(data.columns))))
+        dct["verbose"] = verbose
+        config.append(dct)
 
     with open(options["<config.json>"], "w") as fout:
         json.dump(config, fout, indent=4)
