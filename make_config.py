@@ -37,6 +37,11 @@ def make_config():
     feature_scaling_options = (False, True)
     verbose = False
     data = pandas.read_csv(options["<features.csv>"])
+    classes = pandas.read_csv(options["<classes.csv>"])
+    # class_code: number of examples, e.g. {0: 10, 1: 20, 2: 35, 3: 12}
+    classes_counts_raw = dict(classes[classes.columns[0]].value_counts())
+    # class name: number of examples
+    classes_counts = [(name, classes_counts_raw[i]) for i, name in enumerate(class_names)]
     config = []
     for classifier, scaling in product(classifiers, feature_scaling_options):
         dct = OrderedDict()
@@ -46,8 +51,9 @@ def make_config():
                 "random_state": random_state
             })))
         dct["classes"] = OrderedDict((
-            ("filename", options[u"<classes.csv>"]),
-            ("names", class_names)))
+            ("names", classes_counts),
+            ("total", sum(classes_counts_raw.values())),
+            ("filename", options[u"<classes.csv>"])))
         dct["features"] = OrderedDict((
             ("scaling", scaling),
             ("count", len(data.columns)),

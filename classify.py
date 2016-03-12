@@ -229,7 +229,7 @@ def train_and_evaluate_classifier(options):
     train_classifier(classifier, X_train, y_train, results, options['verbose'])
     y_predicted = predict(classifier, X_test, results, options['verbose'])
     evaluate(classifier, y_test, y_predicted, feature_names,
-             options['classes']['names'], results, options['verbose'])
+             dict(options['classes']['names']).keys(), results, options['verbose'])
     return results
 
 
