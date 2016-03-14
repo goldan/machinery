@@ -1,3 +1,4 @@
 featureforge
 schema
 nltk
+tabulate

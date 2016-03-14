@@ -13,17 +13,19 @@ import sys
 
 from docopt import docopt
 from featureforge.experimentation.stats_manager import StatsManager
+from tabulate import tabulate
 
 
 def analyze_results():
     """Print experiments results stored in MongoDB."""
     options = docopt(__doc__)
     manager = StatsManager(100000, options["<db_name>"])
-    for experiment in manager.iter_results():
-        print experiment['classifier']['name']
-        print experiment['results']['accuracy']
-        print experiment['results']['report']
-        print experiment['results']['confusion_matrix']
+    headers = ['Classifier', 'scaling', 'accuracy']
+    results = [(
+        exp['classifier']['name'],
+        exp['features']['scaling'],
+        str(exp['results']['accuracy']*100) + '%') for exp in manager.iter_results()]
+    print tabulate(results, headers)
 
 
 if __name__ == "__main__":
