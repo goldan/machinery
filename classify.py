@@ -1,4 +1,5 @@
 """Run experiments using a json configuration file and store results in MongoDB."""
+import os
 import sys
 from importlib import import_module
 from time import time
@@ -235,7 +236,8 @@ def train_and_evaluate_classifier(options):
 
 if __name__ == "__main__":
     try:
-        runner.main(train_and_evaluate_classifier)
+        runner.main(train_and_evaluate_classifier,
+                    use_git_info_from_path=os.path.dirname(__file__) or '.')
     except KeyboardInterrupt:
         pass
     sys.exit(0)

@@ -15,6 +15,7 @@ import json
 import random
 import sys
 from collections import OrderedDict
+from hashlib import sha256
 from itertools import product
 import pandas
 
@@ -53,11 +54,13 @@ def make_config():
         dct["classes"] = OrderedDict((
             ("names", classes_counts),
             ("total", sum(classes_counts_raw.values())),
-            ("filename", options[u"<classes.csv>"])))
+            ("filename", options[u"<classes.csv>"]),
+            ("filehash", sha256(open(options[u"<classes.csv>"], 'rb').read()).hexdigest())))
         dct["features"] = OrderedDict((
             ("scaling", scaling),
             ("count", len(data.columns)),
             ("filename", options["<features.csv>"]),
+            ("filehash", sha256(open(options["<features.csv>"], 'rb').read()).hexdigest()),
             ("names", sorted(data.columns))))
         dct["verbose"] = verbose
         config.append(dct)
