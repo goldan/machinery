@@ -35,76 +35,109 @@ def classifiers_config(random_state):
         random_state: random_state config option to include to some classifiers.
 
     Returns:
-        dict {<classifier_name>: {<classifier_config_dict>}}.
+        dict {<classifier_name>: {'init': classifier init options,
+                                  'grid': dict of classifier parameters grid}}.
     """
     return {
         'tree.DecisionTreeClassifier': {
-            'criterion': ('gini', 'entropy'),
-            'splitter': ('best', 'random'),
-            'max_features': ('auto', 'sqrt', 'log2', None),
-            'class_weight': ('balanced', None),
-            'random_state': random_state
+            'init': {
+                'random_state': random_state
+            },
+            'grid': {
+                'criterion': ('gini', 'entropy'),
+                'splitter': ('best', 'random'),
+                'max_features': ('auto', 'sqrt', 'log2', None),
+                'class_weight': ('balanced', None)
+            }
         },
         'neighbors.KNeighborsClassifier': {
-            'n_neighbors': range(1, 101, 3),
-            'weights': ('uniform', 'distance'),
-            'algorithm': ('auto', 'ball_tree', 'kd_tree', 'brute'),
-            'p': range(1, 11)
+            'grid': {
+                'n_neighbors': range(1, 101, 3),
+                'weights': ('uniform', 'distance'),
+                'algorithm': ('auto', 'ball_tree', 'kd_tree', 'brute'),
+                'p': range(1, 11)
+            }
         },
         'svm.LinearSVC': {
-            'C': range(11),
-            'loss': ('hinge', 'squared_hinge'),
-            'penalty': ('l1', 'l2'),
-            'dual': (True, False),
-            'multi_class': ('ovr', 'crammer_singer'),
-            'class_weight': ('balanced', None),
-            'random_state': random_state
+            'init': {
+                'random_state': random_state
+            },
+            'grid': {
+                'C': range(11),
+                'loss': ('hinge', 'squared_hinge'),
+                'penalty': ('l1', 'l2'),
+                'dual': (True, False),
+                'multi_class': ('ovr', 'crammer_singer'),
+                'class_weight': ('balanced', None)
+            }
         },
         'svm.SVC': {
-            'C': range(11),
-            'kernel': ('linear', 'poly', 'rbf', 'sigmoid', 'precomputed'),
-            'shrinking': (True, False),
-            'class_weight': ('balanced', None),
-            'decision_function_shape': ('ovo', 'ovr'),
-            'random_state': random_state
+            'init': {
+                'random_state': random_state
+            },
+            'grid': {
+                'C': range(11),
+                'kernel': ('linear', 'poly', 'rbf', 'sigmoid', 'precomputed'),
+                'shrinking': (True, False),
+                'class_weight': ('balanced', None),
+                'decision_function_shape': ('ovo', 'ovr')
+            }
         },
         'ensemble.RandomForestClassifier': {
-            'n_estimators': range(2, 50, 4),
-            'criterion': ('gini', 'entropy'),
-            'max_features': ('auto', 'sqrt', 'log2', None),
-            'bootstrap': (True, False),
-            'oob_score': (True, False),
-            'random_state': random_state,
-            'class_weight': ('balanced', 'balanced_subsample', None),
+            'init': {
+                'random_state': random_state
+            },
+            'grid': {
+                'n_estimators': range(2, 50, 4),
+                'criterion': ('gini', 'entropy'),
+                'max_features': ('auto', 'sqrt', 'log2', None),
+                'bootstrap': (True, False),
+                'oob_score': (True, False),
+                'class_weight': ('balanced', 'balanced_subsample', None),
+            }
         },
         'ensemble.ExtraTreesClassifier': {
-            'n_estimators': range(2, 50, 4),
-            'criterion': ('gini', 'entropy'),
-            'max_features': ('auto', 'sqrt', 'log2', None),
-            'bootstrap': (True, False),
-            'oob_score': (True, False),
-            'random_state': random_state,
-            'class_weight': ('balanced', 'balanced_subsample', None),
+            'init': {
+                'random_state': random_state
+            },
+            'grid': {
+                'n_estimators': range(2, 50, 4),
+                'criterion': ('gini', 'entropy'),
+                'max_features': ('auto', 'sqrt', 'log2', None),
+                'bootstrap': (True, False),
+                'oob_score': (True, False),
+                'class_weight': ('balanced', 'balanced_subsample', None),
+            }
         },
         'ensemble.AdaBoostClassifier': {
-            'n_estimators': range(10, 101, 10),
-            'learning_rate': [1] + list(linspace(0.1, 10, 21)),
-            'algorithm': ('SAMME', 'SAMME.R'),
-            'random_state': random_state
+            'init': {
+                'random_state': random_state
+            },
+            'grid': {
+                'n_estimators': range(10, 101, 10),
+                'learning_rate': [1] + list(linspace(0.1, 10, 21)),
+                'algorithm': ('SAMME', 'SAMME.R'),
+            }
         },
         'ensemble.GradientBoostingClassifier': {
-            'loss': ('deviance', 'exponential'),
-            'learning_rate': [0.1] + list(linspace(0.01, 3, 21)),
-            'n_estimators': range(50, 301, 25),
-            'max_depth': range(1, 11),
-            'subsample': [1] + list(linspace(0.1, 3, 21)),
-            'max_features': ('auto', 'sqrt', 'log2', None),
-            'random_state': random_state
+            'init': {
+                'random_state': random_state
+            },
+            'grid': {
+                'loss': ('deviance', 'exponential'),
+                'learning_rate': [0.1] + list(linspace(0.01, 3, 21)),
+                'n_estimators': range(50, 301, 25),
+                'max_depth': range(1, 11),
+                'subsample': [1] + list(linspace(0.1, 3, 21)),
+                'max_features': ('auto', 'sqrt', 'log2', None),
+            }
         },
         'naive_bayes.GaussianNB': {},
         'discriminant_analysis.LinearDiscriminantAnalysis': {
-            'solver': ('svd', 'lsqr', 'eigen'),
-            'shrinkage': (None, 'auto'),
+            'grid': {
+                'solver': ('svd', 'lsqr', 'eigen'),
+                'shrinkage': (None, 'auto'),
+            }
         },
         'discriminant_analysis.QuadraticDiscriminantAnalysis': {},
     }
