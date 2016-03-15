@@ -2,3 +2,5 @@ featureforge
 schema
 nltk
 tabulate
+deepdiff
+https://github.com/dprince/python-prettytable
