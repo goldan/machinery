@@ -411,38 +411,61 @@ def get_features(org_popularity_file, job_words_popularity_file):
     return features
 
 
-def export_features(candidates, options):
+def export_features(candidates_train, candidates_test,
+                    features_train_filename, features_test_filename,
+                    popular_organizations_filename, popular_job_title_words_filename,
+                    verbose):
     """Export feature values for candidates to a csv or binary file.
 
     Take candidates classified by humans.
 
     Args:
-        candidates: list of candidates to export features for.
-        options: command-line options object.
-            See main() docstring for description of them.
+        candidates_train: list of candidates in training set to export features for.
+        candidates_test: list of candidates in test set to export features for.
+        features_train_filename: name of file to export train feature values to.
+        features_test_filename: name of file to export test feature values to.
+        popular_organizations_filename: name of file containing
+            organizations popularity table.
+        popular_job_title_words_filename: name of file containing
+            job titles popularity table.
+        verbose: if set, export human-readable csv; otherwise export binary pickled sparse matrix
+            which is faster to process by classification algorithms.
     """
-    with open(options.output_features_filename, "wb") as fout, \
-            open(options.popular_organizations_filename, "rb") as popular_organizations_file, \
-            open(options.popular_job_title_words_filename, "rb") as popular_job_title_words_file:
+    with open(features_train_filename, "wb") as ftrain, \
+            open(features_test_filename, "wb") as ftest, \
+            open(popular_organizations_filename, "rb") as popular_organizations_file, \
+            open(popular_job_title_words_filename, "rb") as popular_job_title_words_file:
         features = get_features(popular_organizations_file, popular_job_title_words_file)
-        writer = csv.writer(fout, **CSV_OPTIONS)
+        train_writer = csv.writer(ftrain, **CSV_OPTIONS)
+        test_writer = csv.writer(ftest, **CSV_OPTIONS)
         i = 0
-        vectorizer = Vectorizer(features, sparse=not options.verbose)
-        vectorizer.fit(candidates)
-        values = vectorizer.transform(candidates)
-        if options.verbose:
+        vectorizer = Vectorizer(features, sparse=not verbose)
+        # note that we fit the vectorizer both for train and test candidates,
+        # which means that we take all possible values for bag-of-words features,
+        # both from training and test candidates.
+        # it's ok, because we just construct all possible values (from popular lists).
+        vectorizer.fit(list(candidates_train)+list(candidates_test))
+        values_train = vectorizer.transform(candidates_train)
+        values_test = vectorizer.transform(candidates_test)
+        if verbose:
             headers = []
-            for i in range(values[0].shape[0]):
+            for i in range(values_train[0].shape[0]):
                 feature, info = vectorizer.column_to_feature(i)
                 header = feature.name + ((" " + info) if info else "")
                 headers.append(header)
-            writerow(writer, headers)
-            for row in values:
-                writerow(writer, row)
+            writerow(train_writer, headers)
+            writerow(test_writer, headers)
+            for row in values_train:
+                writerow(train_writer, row)
+                i += 1
+                print "\r%d" % i,
+            for row in values_test:
+                writerow(test_writer, row)
                 i += 1
                 print "\r%d" % i,
         else:
-            pickle.dump(values, fout)
+            pickle.dump(values_train, ftrain)
+            pickle.dump(values_test, ftest)
 
 
 def export_classes(candidates, filename):
@@ -471,16 +494,21 @@ def main():
             organizations popularity table.
         popular_job_title_words_filename: name of file containing
             job titles popularity table.
-        output_filename: name of file to export features to.
+        x_train_filename: name of file to export training set feature values to.
+        y_train_filename: name of file to export training set classes to.
+        x_test_filename: name of file to export test set feature values to.
+        y_test_filename: name of file to export test set classes to.
         limit: (optional) number of candidates to export features for.
         verbose: if set, export human-readable csv; otherwise export binary pickled sparse matrix
             which is faster to process by classification algorithms.
     """
     parser = ArgumentParser()
-    parser.add_argument('--org-names-file', dest='popular_organizations_filename', type=str)
-    parser.add_argument('--job-titles-file', dest='popular_job_title_words_filename', type=str)
-    parser.add_argument('--output-x', dest='output_features_filename', type=str)
-    parser.add_argument('--output-y', dest='output_class_filename', type=str)
+    parser.add_argument('--org-names', dest='popular_organizations_filename', type=str)
+    parser.add_argument('--job-titles', dest='popular_job_title_words_filename', type=str)
+    parser.add_argument('--x-train', dest='x_train_filename', type=str)
+    parser.add_argument('--y-train', dest='y_train_filename', type=str)
+    parser.add_argument('--x-test', dest='x_test_filename', type=str)
+    parser.add_argument('--y-test', dest='y_test_filename', type=str)
     parser.add_argument('--limit', dest='limit', type=int)
     parser.add_argument('--verbose', dest='verbose', type=bool)
     options = parser.parse_args()
@@ -488,8 +516,15 @@ def main():
                                           experience__classifier_category='H')
     if options.limit:
         candidates = candidates[:options.limit]
-    export_features(candidates, options)
-    export_classes(candidates, options.output_class_filename)
+    candidates_test = candidates.filter(experience__test_set=True)
+    test_ids = candidates_test.values_list('id')
+    candidates_train = candidates.filter(id__nin=test_ids)
+    export_features(
+        candidates_train, candidates_test, options.x_train_filename, options.x_test_filename,
+        options.popular_organizations_filename, options.popular_job_title_words_filename,
+        options.verbose)
+    export_classes(candidates_train, options.y_train_filename)
+    export_classes(candidates_test, options.y_test_filename)
 
 
 if __name__ == "__main__":

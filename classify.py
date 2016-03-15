@@ -29,7 +29,8 @@ def train_and_evaluate_classifier(options):
         results dict with classification evaluation results.
     """
     X_train, X_test, y_train, y_test, feature_names = prepare_data(
-        options['features']['filename'], options['classes']['filename'],
+        options['features']['train_filename'], options['classes']['train']['filename'],
+        options['features']['test_filename'], options['classes']['test']['filename'],
         options['features']['scaling'], options['random_state'])
 
     classifier = get_classifier(options['classifier']['name'],
@@ -48,11 +49,12 @@ def train_and_evaluate_classifier(options):
     results["grid_size"] = grid_size
 
     evaluate(classifier, y_test, y_predicted, feature_names,
-             dict(options['classes']['names']).keys(), results, options['verbose'])
+             dict(options['classes']['train']['names']).keys(), results, options['verbose'])
     return results
 
 
-def prepare_data(features_filename, classes_filename, features_scaling, random_state):
+def prepare_data(x_train_filename, y_train_filename, x_test_filename, y_test_filename,
+        features_scaling, random_state):
     """Load training and test sets for classification.
 
     Load features and target classes from csv files.
@@ -74,15 +76,15 @@ def prepare_data(features_filename, classes_filename, features_scaling, random_s
             y_test: vector of right answers (classes) for test set.
             feature_names: list of names of features.
     """
-    data = pandas.read_csv(features_filename)
-    classes = pandas.read_csv(classes_filename)
-    X = numpy.array(data)
+    X_train = pandas.read_csv(x_train_filename)
+    y_train = pandas.read_csv(y_train_filename)
+    X_test = pandas.read_csv(x_test_filename)
+    y_test = pandas.read_csv(y_test_filename)
+    feature_names = X_train.columns
     if features_scaling:
-        X = scale(X)
-    y = numpy.array(classes)
-    X_train, X_test, y_train, y_test = cross_validation.train_test_split(
-        X, y, random_state=random_state)
-    return X_train, X_test, y_train, y_test, data.columns
+        X_train = scale(X_train)
+        X_test = scale(X_test)
+    return X_train, X_test, y_train, y_test, feature_names
 
 
 def get_classifier(name, config_dict):
@@ -143,10 +145,10 @@ def train_classifier(classifier, grid, X_train, y_train, random_state, verbose):
             verbose=True, n_jobs=cpu_count())
         # it automatically refits the best classifier
         # to the full train set. So it's ready to be used to predict.
-        best_classifier = grid_searcher.fit(X_train, y_train.ravel()).best_estimator_
+        best_classifier = grid_searcher.fit(X_train, y_train).best_estimator_
         grid_size = len(grid_searcher.grid_scores_)
     else:
-        classifier.fit(X_train, y_train.ravel())
+        classifier.fit(X_train, y_train)
         best_classifier = classifier
         grid_size = 1
 

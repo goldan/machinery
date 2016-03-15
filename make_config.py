@@ -2,13 +2,15 @@
 u"""Make json config file with experiment configuration.
 
 Usage:
-    make_config.py <features.csv> <classes.csv> <config.json>
+    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json>
 
 Options:
  -h --help              Show this screen.
  --version              Show Version.
- <features.csv>         Name of csv file with feature values.
- <classes.csv>          Name of csv file with labeled classes.
+ <x_train.csv>          Name of csv file with feature values for the training set.
+ <y_train.csv>          Name of csv file with target classes values for the training set.
+ <x_test.csv>           Name of csv file with feature values for the test set.
+ <y_test.csv>           Name of csv file with target classes values for the test set.
  <config.json>          Name of json file to write configuration to.
 """
 import json
@@ -143,6 +145,11 @@ def classifiers_config(random_state):
     }
 
 
+def get_file_hash(filename):
+    """Calculate sha256 hash for a file by given filename."""
+    return sha256(open(filename, 'rb').read()).hexdigest()
+
+
 def make_config(options):
     """Make json configuration file for classification.
 
@@ -158,12 +165,19 @@ def make_config(options):
     random_state = random.randint(0, 1000000)
     class_names = ('0 Insuff', '1 Junior', '2 Exp-ed', '3 Expert')
     feature_scaling_options = (False, True)
-    data = pandas.read_csv(options["<features.csv>"])
-    classes = pandas.read_csv(options["<classes.csv>"])
+    x_train = pandas.read_csv(options["<x_train.csv>"])
+    y_train = pandas.read_csv(options["<y_train.csv>"])
+    y_test = pandas.read_csv(options["<y_test.csv>"])
+    features = x_train.columns
+
     # class_code: number of examples per class, e.g. {0: 10, 1: 20, 2: 35, 3: 12}
-    classes_counts_raw = dict(classes[classes.columns[0]].value_counts())
+    train_classes_counts_raw = dict(y_train[y_train.columns[0]].value_counts())
     # class name: number of examples
-    classes_counts = [(name, classes_counts_raw[i]) for i, name in enumerate(class_names)]
+    train_classes_counts = [(name, train_classes_counts_raw[i])
+                            for i, name in enumerate(class_names)]
+    test_classes_counts_raw = dict(y_test[y_test.columns[0]].value_counts())
+    test_classes_counts = [(name, test_classes_counts_raw[i]) for i, name in enumerate(class_names)]
+
     classifiers = classifiers_config(random_state)
     config = []
     for classifier, scaling in product(classifiers, feature_scaling_options):
@@ -172,16 +186,24 @@ def make_config(options):
             ("name", classifier),
             ("config", classifiers[classifier])))
         dct["classes"] = OrderedDict((
-            ("names", classes_counts),
-            ("total", sum(classes_counts_raw.values())),
-            ("filename", options[u"<classes.csv>"]),
-            ("filehash", sha256(open(options[u"<classes.csv>"], 'rb').read()).hexdigest())))
+            ("train", OrderedDict((
+                ("names", train_classes_counts),
+                ("total", sum(dict(train_classes_counts).values())),
+                ("filename", options[u"<y_train.csv>"]),
+                ("filehash", get_file_hash(options["<y_train.csv>"]))))),
+            ("test", OrderedDict((
+                ("names", test_classes_counts),
+                ("total", sum(dict(test_classes_counts).values())),
+                ("filename", options[u"<y_test.csv>"]),
+                ("filehash", get_file_hash(options["<y_test.csv>"])))))))
         dct["features"] = OrderedDict((
             ("scaling", scaling),
-            ("count", len(data.columns)),
-            ("filename", options["<features.csv>"]),
-            ("filehash", sha256(open(options["<features.csv>"], 'rb').read()).hexdigest()),
-            ("names", sorted(data.columns))))
+            ("count", len(features)),
+            ("train_filename", options["<x_train.csv>"]),
+            ("train_filehash", get_file_hash(options["<x_train.csv>"])),
+            ("test_filename", options["<x_test.csv>"]),
+            ("test_filehash", get_file_hash(options["<x_test.csv>"])),
+            ("names", sorted(features))))
         dct["verbose"] = False
         dct["random_state"] = random_state
         config.append(dct)
