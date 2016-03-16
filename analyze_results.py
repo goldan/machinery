@@ -4,6 +4,7 @@ u"""Print experiments results stored in MongoDB.
 Usage:
     analyze_results.py <db_name>
     analyze_results.py diff <db_name> <id1> <id2>
+    analyze_results.py features <features.csv> <output_file>
 
 Options:
  -h --help              Show this screen.
@@ -11,9 +12,11 @@ Options:
  <db_name>              Mongo database name where the results are stored.
  default action: print table with results.
  diff: print diff between two experiments with <id1> and <id2>.
+ features: print features value counts to a file.
 """
 import sys
 
+import pandas
 from deepdiff import DeepDiff
 from docopt import docopt
 from featureforge.experimentation.stats_manager import StatsManager
@@ -126,11 +129,26 @@ def diff_experiments(db_name, id1, id2):
         prepare_diff_key(key),
         prepare_diff_value(key, values['oldvalue']),
         prepare_diff_value(key, values['newvalue'])) for key, values in
-                            diff['values_changed'].items()])), key=lambda row: row[0])
+                            diff['values_changed'].items() +
+                            diff.get('type_changes', {}).items()])), key=lambda row: row[0])
     for row in rows:
         table.add_row(row)
     table.align = 'l'
     print table
+
+
+def analyze_features(features_filename, output_filename):
+    """Print features value counts to a file.
+
+    Args:
+        features_filename: name of file containing feature values.
+        output_filename: name of file to output result to.
+    """
+    with open(output_filename, 'w') as fout:
+        data = pandas.read_csv(features_filename)
+        for name in data.keys():
+            fout.write("\n\n%s:\n" % name)
+            fout.write(unicode(data[name].value_counts()).encode('utf-8'))
 
 
 def main():
@@ -138,6 +156,8 @@ def main():
     options = docopt(__doc__)
     if options["diff"]:
         diff_experiments(options["<db_name>"], options["<id1>"], options["<id2>"])
+    elif options["features"]:
+        analyze_features(options["<features.csv>"], options["<output_file>"])
     else:
         analyze_results(options["<db_name>"])
 
