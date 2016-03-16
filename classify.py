@@ -211,15 +211,13 @@ def evaluate(classifier, y_test, y_predicted, feature_names, class_names, result
             print "dimensionality: %d" % results['dimensionality']
             print "density: %f" % results['density']
             print ""
+        # coef_ is a matrix (classes x features), values may be negative,
+        # so we take abs of it and sum by all classes
+        feature_weights = abs(classifier.coef_).sum(axis=0)
+        set_important_features(feature_names, feature_weights, results, verbose)
 
     if hasattr(classifier, "feature_importances_"):
-        important_features = sorted(zip(feature_names, classifier.feature_importances_),
-                                    key=lambda (name, value): value, reverse=True)
-        results['important_features'] = [(name, roundto(value)) for
-                                         name, value in important_features if value >= 0.001]
-        results['important_features_count'] = len(results['important_features'])
-        if verbose:
-            print "\n".join("%s: %.2f" % (name, value) for name, value in important_features)
+        set_important_features(feature_names, classifier.feature_importances_, results, verbose)
 
     results['report'] = metrics.classification_report(y_test, y_predicted, target_names=class_names)
     if verbose:
@@ -232,6 +230,26 @@ def evaluate(classifier, y_test, y_predicted, feature_names, class_names, result
         pyplot.show()
 
     results['config'] = classifier.get_params()
+
+
+def set_important_features(feature_names, feature_weights, results, verbose):
+    """Calculate important features and store them (and their count) in results dict.
+
+    A feature is considered important, if its weight is higher than a threshold (0.001).
+
+    Args:
+        feature_names: list of feature names.
+        feature_weights: list of feature weights.
+        results: dict to store results in.
+        verbose: if True, print output to console.
+    """
+    important_features = sorted(zip(feature_names, feature_weights),
+                                key=lambda (name, value): value, reverse=True)
+    results['important_features'] = [(name, roundto(value)) for
+                                     name, value in important_features if value >= 0.001]
+    results['important_features_count'] = len(results['important_features'])
+    if verbose:
+        print "\n".join("%s: %.2f" % (name, value) for name, value in important_features)
 
 
 def get_confusion_matrix(y_test, y_predicted, class_names, results, verbose):
