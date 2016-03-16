@@ -141,7 +141,7 @@ def train_classifier(classifier, grid, X_train, y_train, random_state, verbose):
             y_train.size, n_folds=10, shuffle=True, random_state=random_state)
         grid_searcher = GridSearchCV(
             classifier, grid, scoring='accuracy', cv=cross_validator,
-            verbose=True, n_jobs=cpu_count())
+            verbose=True, n_jobs=cpu_count(), error_score=0)
         # it automatically refits the best classifier
         # to the full train set. So it's ready to be used to predict.
         best_classifier = grid_searcher.fit(X_train, y_train).best_estimator_
