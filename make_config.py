@@ -128,10 +128,14 @@ def classifiers_config(random_state):
             },
             'grid': {
                 'loss': ('deviance', 'exponential'),
-                'learning_rate': [0.1] + list(linspace(0.01, 0.5, 5)),
-                'n_estimators': range(50, 501, 50),
-                'max_depth': range(1, 11),
-                'subsample': list(linspace(0.1, 1, 6)),
+                'learning_rate': [0.01, 0.1, 0.2, 0.5],
+                # 'learning_rate': [0.1] + list(linspace(0.01, 0.5, 5)),
+                'n_estimators': [100, 300, 500],
+                # 'n_estimators': range(50, 501, 50),
+                'max_depth': [1, 3, 5, 7, 10],
+                # 'max_depth': range(1, 11),
+                'subsample': [0.1, 0.5, 1],
+                # 'subsample': list(linspace(0.1, 1, 6)),
                 'max_features': ('auto', 'sqrt', 'log2', None),
             }
         },
