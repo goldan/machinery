@@ -76,10 +76,10 @@ def prepare_data(x_train_filename, y_train_filename, x_test_filename, y_test_fil
             feature_names: list of names of features.
     """
     X_train = pandas.read_csv(x_train_filename)
-    y_train = pandas.read_csv(y_train_filename)
-    X_test = pandas.read_csv(x_test_filename)
-    y_test = pandas.read_csv(y_test_filename)
     feature_names = X_train.columns
+    y_train = numpy.array(pandas.read_csv(y_train_filename)).ravel()
+    X_test = pandas.read_csv(x_test_filename)
+    y_test = numpy.array(pandas.read_csv(y_test_filename)).ravel()
     if features_scaling:
         X_train = scale(X_train)
         X_test = scale(X_test)
