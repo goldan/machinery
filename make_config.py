@@ -41,7 +41,7 @@ def classifiers_config(random_state):
                                   'grid': dict of classifier parameters grid}}.
     """
     return {
-        'tree.DecisionTreeClassifier': {
+        'tree.DecisionTreeClassifier': {  # attributes: feature_importances_
             'init': {
                 'random_state': random_state
             },
@@ -52,7 +52,7 @@ def classifiers_config(random_state):
                 'class_weight': ('balanced', None)
             }
         },
-        'neighbors.KNeighborsClassifier': {
+        'neighbors.KNeighborsClassifier': {  # no attributes
             'grid': {
                 'n_neighbors': range(1, 101, 3),
                 'weights': ('uniform', 'distance'),
@@ -60,7 +60,7 @@ def classifiers_config(random_state):
                 'p': range(1, 11)
             }
         },
-        'svm.LinearSVC': {
+        'svm.LinearSVC': {  # attributes: coef_
             'init': {
                 'random_state': random_state
             },
@@ -73,9 +73,10 @@ def classifiers_config(random_state):
                 'class_weight': ('balanced', None)
             }
         },
-        'svm.SVC': {
+        'svm.SVC': {  # attributes: coef_ (for linear kernel)
             'init': {
-                'random_state': random_state
+                'random_state': random_state,
+                'kernel': str('linear')
             },
             'grid': {
                 'C': range(11),
@@ -85,7 +86,7 @@ def classifiers_config(random_state):
                 'decision_function_shape': ('ovo', 'ovr')
             }
         },
-        'ensemble.RandomForestClassifier': {
+        'ensemble.RandomForestClassifier': {  # attributes: feature_importances_
             'init': {
                 'random_state': random_state
             },
@@ -98,7 +99,7 @@ def classifiers_config(random_state):
                 'class_weight': ('balanced', 'balanced_subsample', None),
             }
         },
-        'ensemble.ExtraTreesClassifier': {
+        'ensemble.ExtraTreesClassifier': {  # attributes: feature_importances_
             'init': {
                 'random_state': random_state
             },
@@ -111,7 +112,7 @@ def classifiers_config(random_state):
                 'class_weight': ('balanced', 'balanced_subsample', None),
             }
         },
-        'ensemble.AdaBoostClassifier': {
+        'ensemble.AdaBoostClassifier': {  # attributes: feature_importances_
             'init': {
                 'random_state': random_state
             },
@@ -121,27 +122,27 @@ def classifiers_config(random_state):
                 'algorithm': ('SAMME', 'SAMME.R'),
             }
         },
-        'ensemble.GradientBoostingClassifier': {
+        'ensemble.GradientBoostingClassifier': {  # attributes: feature_importances_
             'init': {
                 'random_state': random_state
             },
             'grid': {
                 'loss': ('deviance', 'exponential'),
-                'learning_rate': [0.1] + list(linspace(0.01, 3, 21)),
-                'n_estimators': range(50, 301, 25),
+                'learning_rate': [0.1] + list(linspace(0.01, 0.5, 5)),
+                'n_estimators': range(50, 501, 50),
                 'max_depth': range(1, 11),
-                'subsample': [1] + list(linspace(0.1, 3, 21)),
+                'subsample': list(linspace(0.1, 1, 6)),
                 'max_features': ('auto', 'sqrt', 'log2', None),
             }
         },
-        'naive_bayes.GaussianNB': {},
-        'discriminant_analysis.LinearDiscriminantAnalysis': {
+        'naive_bayes.GaussianNB': {},  # no attributes
+        'discriminant_analysis.LinearDiscriminantAnalysis': {  # attributes: coef_
             'grid': {
                 'solver': ('svd', 'lsqr', 'eigen'),
                 'shrinkage': (None, 'auto'),
             }
         },
-        'discriminant_analysis.QuadraticDiscriminantAnalysis': {},
+        'discriminant_analysis.QuadraticDiscriminantAnalysis': {},  # no attributes
     }
 
 
