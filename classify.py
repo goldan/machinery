@@ -246,7 +246,6 @@ def get_confusion_matrix(y_test, y_predicted, class_names, results, verbose):
         results: dict to store matrices in.
         verbose: if True, print matrix to screen and plot.
     """
-    from matplotlib import pyplot
     confusion_matrix = metrics.confusion_matrix(y_test, y_predicted)
     results['confusion_matrix'] = str(confusion_matrix)
     normalized_confusion_matrix = (confusion_matrix.astype('float') /
@@ -255,6 +254,7 @@ def get_confusion_matrix(y_test, y_predicted, class_names, results, verbose):
     results['normalized_confusion_matrix'] = str(normalized_confusion_matrix)
 
     if verbose:
+        from matplotlib import pyplot
         print "confusion matrix:"
         numpy.set_printoptions(precision=2)
         print 'Confusion matrix'
