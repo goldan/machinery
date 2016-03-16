@@ -5,6 +5,7 @@ Usage:
     analyze_results.py <db_name>
     analyze_results.py diff <db_name> <id1> <id2>
     analyze_results.py features <features.csv> <output_file>
+    analyze_results.py show <db_name> <experiment_id> <key>
 
 Options:
  -h --help              Show this screen.
@@ -12,7 +13,8 @@ Options:
  <db_name>              Mongo database name where the results are stored.
  default action: print table with results.
  diff: print diff between two experiments with <id1> and <id2>.
- features: print features value counts to a file.
+ features: print features value counts to <output_file>.
+ show: print experiment (found by <experiment_id> in <db_name>) dict <key> value.
 """
 import sys
 
@@ -151,6 +153,73 @@ def analyze_features(features_filename, output_filename):
             fout.write(unicode(data[name].value_counts()).encode('utf-8'))
 
 
+def truncate_lines(value, limit=100):
+    """Truncate each line in value by <limit> chars.
+
+    It's useful before printing long lines in console, not to mess up the output,
+    if one line starts to take multiple lines.
+    But note that if value is e.g. a confusion matrix, it takes multiple lines,
+    but all of them are short. So we just make sure that every line in output
+    is no longer than limit.
+
+    Args:
+        value: value to truncate.
+        limit: number of chars to truncate each line in value by.
+
+    Returns:
+        truncated value, with newline characters preserved.
+    """
+    return "\n".join(line[:limit] for line in str(value).split("\n"))
+
+
+def print_value(value):
+    """Smart tabular print of values, which can be dictionaries.
+
+    If value is not a dictionary, just print it in a table.
+    If it is a dictionary, print every key in it on a separate line of a table,
+    printint nested keys too.
+
+    Args:
+        value: value to print.
+    """
+    def _print_value(table, value, prefix=""):
+        """Add row of value to a table, or call the function recursively.
+
+        If value is a dict, call the function for every dict key.
+
+        Args:
+            table: PrettyTable instance to output values.
+            value: value to print.
+            prefix: key of the value, to print in the first column of the table.
+        """
+        if isinstance(value, dict):
+            for key, subvalue in value.items():
+                _print_value(table, subvalue, (prefix+"." if prefix else "")+key)
+        else:
+            table.add_row([prefix, truncate_lines(value)])
+    table = PrettyTable()
+    table.field_names = ["Key", "Value"]
+    _print_value(table, value)
+    table.align = 'l'
+    print table
+
+
+def show_experiment(db_name, experiment_id, key):
+    """Print experiment dict values by key (dotted notation).
+
+    Args:
+        db_name: database name to connect to.
+        experiment_id: id of experiment to print values for.
+        key: key of experiment dict in database to print contains of.
+            Key can be nested, subkeys are separated by ".".
+    """
+    experiment = get_experiments(db_name, [experiment_id])[0]
+    value = experiment
+    for subkey in key.split("."):
+        value = value[subkey]
+    print_value(value)
+
+
 def main():
     """Select the action from command line and execute the function."""
     options = docopt(__doc__)
@@ -158,6 +227,8 @@ def main():
         diff_experiments(options["<db_name>"], options["<id1>"], options["<id2>"])
     elif options["features"]:
         analyze_features(options["<features.csv>"], options["<output_file>"])
+    elif options["show"]:
+        show_experiment(options["<db_name>"], options["<experiment_id>"], options["<key>"])
     else:
         analyze_results(options["<db_name>"])
 
