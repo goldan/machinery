@@ -270,7 +270,7 @@ def get_confusion_matrix(y_test, y_predicted, class_names, results, verbose):
 
 
 def plot_confusion_matrix(confusion_matrix, class_names,
-                          title='Confusion matrix', cmap=pyplot.cm.Blues):
+                          title='Confusion matrix', cmap=None):
     """Plot confusion matrix.
 
     Args:
@@ -280,6 +280,8 @@ def plot_confusion_matrix(confusion_matrix, class_names,
         cmap: color map for plotting.
     """
     from matplotlib import pyplot
+    if not cmap:
+        cmap = pyplot.cm.Blues
     pyplot.imshow(confusion_matrix, interpolation='nearest', cmap=cmap)
     pyplot.title(title)
     pyplot.colorbar()
