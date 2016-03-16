@@ -67,7 +67,8 @@ def analyze_results(db_name, experiment_ids=None):
         str(exp['results']['accuracy']*100) + '%',
         exp['random_state'],
         pretty_date(exp['booked_at']))
-                      for exp in experiments], key=lambda row: row[4], reverse=True)
+                      for exp in experiments],
+                     key=lambda row: float(row[4].strip('%')), reverse=True)
     print tabulate(results, headers)
 
 
