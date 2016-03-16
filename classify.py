@@ -16,7 +16,6 @@ from sklearn.preprocessing import scale
 from sklearn.utils.extmath import density
 
 from machinery.common.utils import roundto
-from matplotlib import pyplot
 
 
 def train_and_evaluate_classifier(options):
@@ -229,6 +228,7 @@ def evaluate(classifier, y_test, y_predicted, feature_names, class_names, result
 
     get_confusion_matrix(y_test, y_predicted, class_names, results, verbose)
     if verbose:
+        from matplotlib import pyplot
         pyplot.show()
 
     results['config'] = classifier.get_params()
@@ -246,6 +246,7 @@ def get_confusion_matrix(y_test, y_predicted, class_names, results, verbose):
         results: dict to store matrices in.
         verbose: if True, print matrix to screen and plot.
     """
+    from matplotlib import pyplot
     confusion_matrix = metrics.confusion_matrix(y_test, y_predicted)
     results['confusion_matrix'] = str(confusion_matrix)
     normalized_confusion_matrix = (confusion_matrix.astype('float') /
@@ -278,6 +279,7 @@ def plot_confusion_matrix(confusion_matrix, class_names,
         title: plot title.
         cmap: color map for plotting.
     """
+    from matplotlib import pyplot
     pyplot.imshow(confusion_matrix, interpolation='nearest', cmap=cmap)
     pyplot.title(title)
     pyplot.colorbar()
