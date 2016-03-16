@@ -216,6 +216,63 @@ class Exists(BoolFeature):
     _name = "exists"
 
 
+class DictKeyFeature(BaseFeature):
+    """Base class for features evaluating dict key.
+
+    It is not meant to be instantiating directly, but only subclassed.
+    """
+
+    key = None
+
+    def __init__(self, key=None):
+        """Set key and _name from it."""
+        super(DictKeyFeature, self).__init__()
+        if key:
+            self.key = key
+        self._name = self.key
+
+    def _process(self, data_point):
+        """Get data_point dict key value.
+
+        Args:
+            data_point: object whose feature is evaluated.
+
+        Returns:
+            dictionary key value.
+
+        Raises:
+            EvaluationError, if the dict does not have the key.
+        """
+        try:
+            return data_point[self.key]
+        except KeyError:
+            raise EvaluationError
+
+
+class DictKeyString(DictKeyFeature, StringFeature):
+    """Feature that evaluates dict key and outputs a string."""
+
+    pass
+
+
+class DictKeyBool(DictKeyFeature, BoolFeature):
+    """Feature that evaluates dict key and outputs a boolean."""
+
+    pass
+
+
+class DictKeyInt(DictKeyFeature, IntFeature):
+    """Feature that evaluates dict key and outputs an integer."""
+
+    pass
+
+
+class DictKeyLen(DictKeyFeature, LenFeature):
+    """Feature that evaluates dict key and outputs an length of it."""
+
+    pass
+
+
 class AttributeFeature(BaseFeature):
     """Base class for features evaluating object's attribute.
 

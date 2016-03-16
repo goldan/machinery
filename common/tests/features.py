@@ -4,9 +4,10 @@ import unittest
 from featureforge.validate import EQ, RAISES
 from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, AttributeString,
-                                       BoolFeature, Exists, IntFeature,
-                                       LenFeature, ListFeature, MaxFeature,
-                                       SetFeature, StringFeature,
+                                       BoolFeature, DictKeyBool, DictKeyInt,
+                                       DictKeyLen, DictKeyString, Exists,
+                                       IntFeature, LenFeature, ListFeature,
+                                       MaxFeature, SetFeature, StringFeature,
                                        SubAttributeSet, SubAttributeString,
                                        SumFeature,
                                        make_list_of_values_features)
@@ -141,6 +142,87 @@ class ExistsTestCase(BaseFeatureTestCase):
         'test_empty': ('', EQ, False),
         'test_none': (None, EQ, False),
     }
+
+
+class BaseDictKeyTestCase(BaseFeatureTestCase):
+    """Base class for testing DictKeyFeature subclasses.
+
+    Attributes:
+        base_test_class: TestCase subclass with tests
+            for value type of the dict value.
+            E.g. if dict is supposed to contain int,
+            then base_test_class will be IntFeatureTestCase.
+            It is used to reuse fixtures from.
+        default_value: value that the feature is expected to have
+            if key does not exist or object is None.
+        key: dict key for fixtures.
+        other_key: some other key to check that only specified key is taken.
+    """
+
+    base_test_class = None
+    default_value = None
+    key = "mykey"
+    other_key = "other_key"
+
+    @classmethod
+    def setUpClass(cls):
+        """Skip testing this very class, because it's a base 'abstract' class."""
+        if cls is BaseDictKeyTestCase:
+            raise unittest.SkipTest("Skip BaseDictKeyTestCase tests, it's a base class")
+        super(BaseDictKeyTestCase, cls).setUpClass()
+
+    @property
+    def fixtures(self):
+        """Generate fixtures for testing.
+
+        * take fixtures of the base_test_class and test them against an dict
+            having a single key and values from the fixtures.
+        * take the same fixtures and test against a dict having
+            a different key and values from the fixtures.
+        * test against None object.
+
+        Returns:
+            dictionary of tuples with fixtures.
+        """
+        fixs = {}
+        for key, values in self.base_test_class.fixtures.items():
+            fixs[key] = ({self.key: values[0]}, values[1], values[2])
+            fixs[key + "_other"] = ({self.other_key: values[0]},
+                                    EQ, self.default_value)
+            fixs['test_none'] = (None, EQ, self.default_value)
+        return fixs
+
+
+class DictKeyStringTestCase(BaseDictKeyTestCase):
+    """Test DictKeyString evaluation."""
+
+    feature = DictKeyString("mykey")
+    base_test_class = StringFeatureTestCase
+    default_value = ''
+
+
+class DictKeyBoolTestCase(BaseDictKeyTestCase):
+    """Test DictKeyBool evaluation."""
+
+    feature = DictKeyBool("mykey")
+    base_test_class = BoolFeatureTestCase
+    default_value = False
+
+
+class DictKeyIntTestCase(BaseDictKeyTestCase):
+    """Test DictKeyInt evaluation."""
+
+    feature = DictKeyInt("mykey")
+    base_test_class = IntFeatureTestCase
+    default_value = 0
+
+
+class DictKeyLenTestCase(BaseDictKeyTestCase):
+    """Test DictKeyLen evaluation."""
+
+    feature = DictKeyLen("mykey")
+    base_test_class = LenFeatureTestCase
+    default_value = 0
 
 
 class BaseAttributeTestCase(BaseFeatureTestCase):
