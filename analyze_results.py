@@ -31,7 +31,7 @@ from docopt import docopt
 from featureforge.experimentation.stats_manager import StatsManager
 from prettytable import PrettyTable
 from tabulate import tabulate
-from machinery.common.utils import pretty_date
+from machinery.common.utils import pretty_date, parse_classification_report
 
 
 def get_experiments(db_name, ids=None, from_time=100000):
@@ -93,6 +93,53 @@ def analyze_results(db_name, experiment_ids=None, sort_by='score', reverse=False
     rows = [row._replace(score=str(row.score*100)+'%', booked_at=pretty_date(row.booked_at))
             for row in rows]
     print tabulate(rows, headers)
+
+
+def update_experiment(manager, experiment_id, key, value):
+    """Update experiment record in Mongo database.
+
+    Args:
+        manager: StatsManager connected to the database.
+        experiment_id: id of the experiment to update.
+        key: nested key in the record to update, in dot-notation.
+        value: value to set for the key.
+    """
+    query = {u'_id': experiment_id}
+    update = {'$set': {key: value}}
+    manager.data.find_and_modify(query, update)
+
+
+def recreate_metrics(db_name):
+    """Recreate and store metrics for experiments from classification reports.
+
+    For every experiment in the database, take its classification report,
+    parse it and store individual metrics back in the database.
+    Used for experiments for which metrics like precision/recall/f1-score and support
+    was not stored, but the classification reports were.
+    Note that values are always updated, even if they are actually in the database.
+
+    Args:
+        db_name: database name to connect to.
+    """
+    experiments = get_experiments(db_name)
+    manager = StatsManager(100000, db_name)
+    for experiment in experiments:
+        eid = experiment['_id']
+        print eid
+        report = parse_classification_report(experiment['results']['report'])
+        precisions = [scores[0] for scores in report.values()[:-1]]
+        recalls = [scores[1] for scores in report.values()[:-1]]
+        fscores = [scores[2] for scores in report.values()[:-1]]
+        supports = [scores[3] for scores in report.values()[:-1]]
+        update_experiment(manager, eid, 'results.precisions', precisions)
+        update_experiment(manager, eid, 'results.recalls', recalls)
+        update_experiment(manager, eid, 'results.f1-scores', fscores)
+        update_experiment(manager, eid, 'results.supports', supports)
+        precision, recall, fscore, support = report.values()[-1]
+        update_experiment(manager, eid, 'results.precision', precision)
+        update_experiment(manager, eid, 'results.recall', recall)
+        update_experiment(manager, eid, 'results.f1-score', fscore)
+        update_experiment(manager, eid, 'results.support', support)
 
 
 def prepare_diff_key(key):
