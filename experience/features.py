@@ -459,7 +459,7 @@ def profile_bag_of_words_features(profile_features):
         return set(flatten_list([list(value) for value in values]))
 
     return [profile_aggregate_feature(
-        feature, combine_bags_of_words, "set") for feature in profile_features]
+        feature, combine_bags_of_words, "") for feature in profile_features]
 
 
 def candidate_sourcerer_feature(sourcerer_feature, sourcerer_cache):
