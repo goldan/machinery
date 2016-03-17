@@ -80,3 +80,18 @@ def pretty_date(time=False):
     if day_diff < 365:
         return str(day_diff / 30) + " months ago"
     return str(day_diff / 365) + " years ago"
+
+
+def flatten_list(lst):
+    """Transform a 1-level nested list into a flat one.
+
+    Args:
+        lst: a nested list to transform.
+
+    Returns:
+        a flat list.
+
+    >>> flatten_list([[1, 2],[3, 4]])
+    >>> [1, 2, 3, 4]
+    """
+    return [item for sublist in lst for item in sublist]

@@ -5,7 +5,7 @@ import pickle
 import string
 import sys
 from argparse import ArgumentParser
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from itertools import product
 from types import MethodType
 
@@ -16,38 +16,23 @@ from nltk.stem.wordnet import WordNetLemmatizer
 
 from machinery.common.atlas import (GENDER_MALE, PROFILE_TYPES_BY_TYPE_ID,
                                     Candidate, CandidateExperienceClass,
-                                    Organization)
+                                    Organization, sourcerer_get_by_id)
 from machinery.common.features import (AttributeBool, AttributeInt,
                                        AttributeLen, BoolFeature, ListFeature,
                                        SetFeature, SubAttributeSet,
                                        make_list_of_values_features)
-from machinery.common.utils import CSV_OPTIONS, writerow
+from machinery.common.utils import CSV_OPTIONS, writerow, flatten_list
 
 
 class Gender(AttributeBool):
     """Gender feature. 1 for male, 0 for women (no sexism)."""
 
     attribute_name = "gender"
+    default = True
 
     def _postprocess(self, gender):
         """Convert gender code to binary format."""
         return gender == GENDER_MALE
-
-
-class PhotoExists(BoolFeature):
-    """Feature indicating if any photos exist for the profile."""
-
-    def _postprocess(self, profile):
-        """Return True if any photo exists for the profile.
-
-        Args:
-            profile to evaluate.
-
-        Returns:
-            True if profile.profile_pic_url exists or profile.photos is not empty.
-        """
-        photos = AttributeLen("photos")._evaluate(profile)
-        return getattr(profile, "profile_pic_url", None) or photos
 
 
 class SkillsFeature(ListFeature):
@@ -85,21 +70,6 @@ class FootprintsFeature(ListFeature):
         return [footprint.value for footprint in
                 getattr(profile, "digital_footprint_scores", []) or []
                 if hasattr(footprint, "value")]
-
-
-class LocationExists(BoolFeature):
-    """Feature indicating if location exists for the profile."""
-
-    def _postprocess(self, profile):
-        """Return True if location or location_raw exist for the profile.
-
-        Args:
-            profile to evaluate.
-
-        Returns:
-            True if profile.location or profile.location_raw exist.
-        """
-        return getattr(profile, "location", None) or getattr(profile, "location_raw", None)
 
 
 class ProfileOrganizationNames(SetFeature):
@@ -355,13 +325,206 @@ def make_candidate_features(profile_features):
             for type_id, profile_feature in product(PROFILE_TYPES_BY_TYPE_ID, profile_features)]
 
 
+def profile_aggregate_feature(profile_feature, aggregating_func, name_suffix,
+                              exclude_default=False):
+    """Create a candidate-level aggregating feature from profile-level feature.
+
+    Take a feature which operates on a profile and make a feature which takes a candidate,
+    evaluates the feature on every of his profile and combines the results using
+    the aggregating function.
+
+    Args:
+        profile_feature: feature operating on a single profile.
+        aggregating_func: function taking profile feature values and outputs a single value.
+        name_suffix: suffix to be added to the name of the underlying feature, to
+            form the name of the resulting feature.
+        exclude_default: if True, filter the list of values of the feature on profiles,
+            excluding values equal to feature.default value. So only non-default
+            values are passed to the aggregating function
+            If there are none of them, just return default value without calling the
+            aggregating function.
+
+    Returns:
+        candidate feature, aggregating profile feature values on all candidate profiles.
+    """
+    feature = copy.copy(profile_feature)
+    feature._name = "%s %s" % (profile_feature.name, name_suffix)
+
+    def _evaluate(self, candidate, profile_feature=profile_feature):
+        """Evaluate the candidate feature using underlying profile feature.
+
+        Args:
+            candidate: data point to evaluate.
+            profile_feature: profile feature used to evaluate the profile.
+
+        Returns:
+            evaluation of the feature for the given profile.
+        """
+        if not getattr(candidate, "profiles", None):
+            return profile_feature.default
+        values = [profile_feature._evaluate(profile) for profile in candidate.profiles]
+        value = profile_feature.default
+        if exclude_default:
+            # do aggregation only on non-default values, if any
+            # if they all default, just return the default value
+            values = [value for value in values if value != profile_feature.default]
+        if values:
+            value = aggregating_func(values)
+        return value
+
+    feature._evaluate = MethodType(_evaluate, feature)
+    return feature
+
+
+def profile_most_common_features(profile_features):
+    """Make candidate features outputting most common profile values.
+
+    Take a list of profile_features operating on profiles and
+    create a list of candidate-level features. Each candidate-level feature
+    outputs the most common value of the corresponding profile feature
+    among all candidate profiles.
+
+    Args:
+        profile_features: list of profile features used to evaluate profiles.
+
+    Returns:
+        list of candidate-level features, each of which outputs most common
+        value of corresponding profile feature among all candidate profiles.
+    """
+    def take_most_common(values):
+        """Take an iterable of values and return the most popular one."""
+        counter = Counter(values)
+        return counter.most_common()[0][0]
+
+    return [profile_aggregate_feature(
+        feature, take_most_common, "most common", True) for feature in profile_features]
+
+
+def profile_any_exists_features(profile_features):
+    """Make candidate features outputting OR on profile feature values.
+
+    Take a list of profile_features operating on profiles and
+    create a list of candidate-level features. Each candidate-level feature
+    outputs boolean OR on values of the corresponding profile feature
+    among all candidate profiles.
+
+    Args:
+        profile_features: list of profile features used to evaluate profiles.
+
+    Returns:
+        list of candidate-level features, each of which outputs the boolean OR on
+        values of corresponding profile feature among all candidate profiles.
+    """
+    return [profile_aggregate_feature(
+        feature, any, "exists") for feature in profile_features]
+
+
+def profile_sum_features(profile_features):
+    """Make candidate features outputting sum of profile feature values.
+
+    Take a list of profile_features operating on profiles and
+    create a list of candidate-level features. Each candidate-level feature
+    outputs sum of values of the corresponding profile feature
+    among all candidate profiles.
+
+    Args:
+        profile_features: list of profile features used to evaluate profiles.
+
+    Returns:
+        list of candidate-level features, each of which outputs sum of
+        values of corresponding profile feature among all candidate profiles.
+    """
+    return [profile_aggregate_feature(
+        feature, sum, "sum") for feature in profile_features]
+
+
+def profile_bag_of_words_features(profile_features):
+    """Make candidate features outputting combined bag of words on profile feature values.
+
+    Take a list of profile_features operating on profiles and
+    create a list of candidate-level features. Each candidate-level feature
+    outputs combined set of values of the corresponding profile feature
+    among all candidate profiles.
+
+    Args:
+        profile_features: list of profile features used to evaluate profiles.
+
+    Returns:
+        list of candidate-level features, each of which outputs set of all
+        values of corresponding profile feature among all candidate profiles.
+    """
+    def combine_bags_of_words(values):
+        """Take a list of sets of values and return a set of all of them."""
+        return set(flatten_list([list(value) for value in values]))
+
+    return [profile_aggregate_feature(
+        feature, combine_bags_of_words, "set") for feature in profile_features]
+
+
+def candidate_sourcerer_feature(sourcerer_feature, sourcerer_cache):
+    """Make candidate feature from sourcerer result feature.
+
+    Take a feature operating on a sourcerer result (a dict)
+    and convert it to a feature operating on a candidate.
+
+    Args:
+        sourcerer_feature: feature operating on a sourcerer response.
+        sourcerer_cache: dict {candidate_id: sourcerer} used not to
+            hit sourcerer multiple times for a candidate.
+
+    Returns:
+        candidate feature which outputs sourcerer_feature on candidate.
+    """
+    feature = copy.copy(sourcerer_feature)
+
+    def _evaluate(self, candidate, sourcerer_feature=sourcerer_feature, cache=sourcerer_cache):
+        """Evaluate the candidate feature using underlying sourcerer feature.
+
+        Args:
+            candidate: data point to evaluate.
+            sourcerer_feature: sourcerer feature used to evaluate the sourcerer response.
+            cache: dict {candidate_id: sourcerer} used not to hit sourcerer
+                multiple times for a candidate.
+
+        Returns:
+            evaluation of the feature for the given candidate.
+        """
+        if not getattr(candidate, "id", None):
+            return sourcerer_feature.default
+        sourcerer_candidate = cache.get(candidate.id)
+        if not sourcerer_candidate:
+            sourcerer_candidate = sourcerer_get_by_id(candidate.id)
+            cache[candidate.id] = sourcerer_candidate
+        return sourcerer_feature._evaluate(sourcerer_candidate)
+
+    feature._evaluate = MethodType(_evaluate, feature)
+    return feature
+
+
+def candidate_sourcerer_features(sourcerer_features):
+    """Make candidate features from sourcerer result features.
+
+    Take features operating on a sourcerer result (a dict)
+    and convert them to features operating on a candidate.
+
+    Args:
+        sourcerer_features: list of features operating on a sourcerer response.
+
+    Returns:
+        list of candidate features which outputs sourcerer_features values on candidate.
+    """
+    sourcerer_cache = {}
+    return [candidate_sourcerer_feature(feature, sourcerer_cache)
+            for feature in sourcerer_features]
+
+
 def get_features(org_popularity_file, job_words_popularity_file):
     """Get a list of all features for candidates.
 
     It includes:
-        * candidate-level features (years_experience)
-        * profile-level features (first_name)
-        * features aggregated from profiles (organization names, job titles words).
+        * candidate sourcerer features (years_experience)
+        * profile aggregating features (age, organization names, job titles words)
+        * profile-specific features (url)
 
     Args:
         org_popularity_file: file descriptor with organization names popularity table.
@@ -370,50 +533,61 @@ def get_features(org_popularity_file, job_words_popularity_file):
     Returns:
         tuple of all candidates feature instances.
     """
-    candidates_base_features = [AttributeInt("years_experience")]
-
-    profile_base_features = [
-        BoolFeature("exists"),
-        AttributeBool("fake"),
-        AttributeBool("deleted"),
+    candidates_base_features = candidate_sourcerer_features((
+        AttributeInt("years_experience"),
         AttributeBool("first_name"),
         AttributeBool("last_name"),
         AttributeBool("full_name"),
+        AttributeBool("photo"),
+        AttributeBool("location_display"),
+        AttributeLen("orgs")))
+
+    pr_most_common_features = profile_most_common_features((
         AttributeInt("age"),
-        Gender(),
-        PhotoExists(),
+        Gender()))
+
+    pr_any_exists_features = profile_any_exists_features((
         AttributeBool("bio"),
-        AttributeBool("url"),
-        LocationExists(),
+        AttributeBool("websites")))
+
+    pr_bag_of_words_features = profile_bag_of_words_features((
         SubAttributeSet("location", "country"),
         SubAttributeSet("location", "state"),
-        SubAttributeSet("location", "city"),
-        AttributeLen("organizations"),
-        AttributeLen("websites"),
+        SubAttributeSet("location", "city")))
+
+    pr_sum_features = profile_sum_features((
         AttributeLen("chats"),
         AttributeInt("followers"),
-        AttributeInt("following")]
+        AttributeInt("following")))
 
-    profile_features = (profile_base_features +
+    profile_specific_features = [
+        AttributeBool("url"),
+        AttributeInt("followers"),
+        AttributeInt("following")]
+    profile_features = (profile_specific_features +
                         make_list_of_values_features(SkillsFeature) +
                         make_list_of_values_features(FootprintsFeature))
-
     candidate_profile_features = make_candidate_features(profile_features)
 
     candidate_aggregated_features = [
         OrganizationNames(org_popularity_file),
         JobTitlesWords(job_words_popularity_file)]
 
-    features = (candidates_base_features +
-                candidate_profile_features +
-                candidate_aggregated_features)
+    features = (
+        candidates_base_features +
+        pr_most_common_features +
+        pr_any_exists_features +
+        pr_bag_of_words_features +
+        pr_sum_features +
+        candidate_profile_features +
+        candidate_aggregated_features)
 
     return features
 
 
 def export_features(candidates_train, candidates_test,
                     features_train_filename, features_test_filename,
-                    popular_organizations_filename, popular_job_title_words_filename,
+                    popular_organizations_filename, job_title_words_filename,
                     verbose):
     """Export feature values for candidates to a csv or binary file.
 
@@ -426,7 +600,7 @@ def export_features(candidates_train, candidates_test,
         features_test_filename: name of file to export test feature values to.
         popular_organizations_filename: name of file containing
             organizations popularity table.
-        popular_job_title_words_filename: name of file containing
+        job_title_words_filename: name of file containing
             job titles popularity table.
         verbose: if set, export human-readable csv; otherwise export binary pickled sparse matrix
             which is faster to process by classification algorithms.
@@ -434,7 +608,7 @@ def export_features(candidates_train, candidates_test,
     with open(features_train_filename, "wb") as ftrain, \
             open(features_test_filename, "wb") as ftest, \
             open(popular_organizations_filename, "rb") as popular_organizations_file, \
-            open(popular_job_title_words_filename, "rb") as popular_job_title_words_file:
+            open(job_title_words_filename, "rb") as popular_job_title_words_file:
         features = get_features(popular_organizations_file, popular_job_title_words_file)
         train_writer = csv.writer(ftrain, **CSV_OPTIONS)
         test_writer = csv.writer(ftest, **CSV_OPTIONS)
