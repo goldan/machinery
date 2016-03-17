@@ -12,7 +12,7 @@ from featureforge.experimentation import runner
 from sklearn import cross_validation, metrics
 from sklearn.cross_validation import KFold
 from sklearn.grid_search import GridSearchCV
-from sklearn.preprocessing import scale
+from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import density
 
 from machinery.common.utils import roundto
@@ -83,8 +83,11 @@ def prepare_data(x_train_filename, y_train_filename, x_test_filename, y_test_fil
     X_test = pandas.read_csv(x_test_filename)
     y_test = numpy.array(pandas.read_csv(y_test_filename)).ravel()
     if features_scaling:
-        X_train = scale(X_train)
-        X_test = scale(X_test)
+        # setup scaler only on training set, and then
+        # apply both to training and test sets
+        scaler = StandardScaler().fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_test = scaler.transform(X_test)
     return X_train, X_test, y_train, y_test, feature_names
 
 
