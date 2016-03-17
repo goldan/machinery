@@ -89,7 +89,7 @@ def analyze_results(db_name, experiment_ids=None, sort_by='score', reverse=False
     do_reverse = sort_key[sort_by][1]  # default reverse value
     if reverse:  # if reverse is True, reverse that default reverse value
         do_reverse = not do_reverse
-    rows.sort(key=lambda row: row[sort_key[sort_by][0]], reverse=do_reverse)
+    rows.sort(key=lambda row: (row[sort_key[sort_by][0]], row[4]), reverse=do_reverse)
     rows = [row._replace(score=str(row.score*100)+'%', booked_at=pretty_date(row.booked_at))
             for row in rows]
     print tabulate(rows, headers)
