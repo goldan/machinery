@@ -222,12 +222,13 @@ def evaluate(classifier, y_test, y_predicted, feature_names, class_names, result
     kappa_score = metrics.cohen_kappa_score(y_test, y_predicted)
     results['cohen_kappa'] = roundto(kappa_score, 4)
 
-    precisions, recalls, fscores, support = metrics.precision_recall_fscore_support(
+    precisions, recalls, fscores, supports = metrics.precision_recall_fscore_support(
         y_test, y_predicted)
     results['precisions'] = [roundto(prec, 4) for prec in precisions]
     results['recalls'] = [roundto(rec, 4) for rec in recalls]
     results['f1-scores'] = [roundto(fsco, 4) for fsco in fscores]
-    results['support'] = list(support)
+    results['supports'] = list(supports)
+    results['support'] = sum(supports)
 
     # we choose weighted average as a most reasonable way to average
     # it is used by sklearn by default in classification report
