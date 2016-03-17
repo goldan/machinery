@@ -2,16 +2,20 @@
 u"""Make json config file with experiment configuration.
 
 Usage:
-    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json>
+    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json> [--classifier=<classifier>] [-n]
 
-Options:
- -h --help              Show this screen.
- --version              Show Version.
+Arguments:
  <x_train.csv>          Name of csv file with feature values for the training set.
  <y_train.csv>          Name of csv file with target classes values for the training set.
  <x_test.csv>           Name of csv file with feature values for the test set.
  <y_test.csv>           Name of csv file with target classes values for the test set.
  <config.json>          Name of json file to write configuration to.
+
+Options:
+ -h --help                  Show this screen.
+ --version                  Show Version.
+ --classifier=<classifier>  Classifier name to use.
+ -n                         Disable grid hyperparameter search.
 """
 import json
 import random
@@ -25,7 +29,7 @@ import pandas
 from docopt import docopt
 
 
-def classifiers_config(random_state):
+def classifiers_config(random_state, classifier_name=None, skip_grid=False):
     """Get classifiers config dict with parameter grid.
 
     Classifier config dict values can be iterables, meaning
@@ -35,12 +39,14 @@ def classifiers_config(random_state):
 
     Args:
         random_state: random_state config option to include to some classifiers.
+        classifier_name: if specified, use only this classifier.
+        skip_grid: if True, do not add grid parameters to search.
 
     Returns:
         dict {<classifier_name>: {'init': classifier init options,
                                   'grid': dict of classifier parameters grid}}.
     """
-    return {
+    classifiers = {
         'tree.DecisionTreeClassifier': {  # attributes: feature_importances_
             'init': {
                 'random_state': random_state
@@ -148,6 +154,14 @@ def classifiers_config(random_state):
         },
         'discriminant_analysis.QuadraticDiscriminantAnalysis': {},  # no attributes
     }
+    if skip_grid:
+        for name, config in classifiers.items():
+            if 'grid' in config:
+                config['grid'] = {}
+    if classifier_name:
+        classifiers = {name: config for name, config in classifiers.items()
+                       if name == classifier_name}
+    return classifiers
 
 
 def get_file_hash(filename):
@@ -183,7 +197,7 @@ def make_config(options):
     test_classes_counts_raw = dict(y_test[y_test.columns[0]].value_counts())
     test_classes_counts = [(name, test_classes_counts_raw[i]) for i, name in enumerate(class_names)]
 
-    classifiers = classifiers_config(random_state)
+    classifiers = classifiers_config(random_state, options["--classifier"], options["-n"])
     config = []
     for classifier, scaling in product(classifiers, feature_scaling_options):
         dct = OrderedDict()
