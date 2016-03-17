@@ -18,8 +18,9 @@ from machinery.common.atlas import (GENDER_MALE, PROFILE_TYPES_BY_TYPE_ID,
                                     Candidate, CandidateExperienceClass,
                                     Organization, sourcerer_get_by_id)
 from machinery.common.features import (AttributeBool, AttributeInt,
-                                       AttributeLen, BoolFeature, ListFeature,
-                                       SetFeature, SubAttributeSet,
+                                       AttributeLen, DictKeyBool, DictKeyInt,
+                                       DictKeyLen, ListFeature, SetFeature,
+                                       SubAttributeSet,
                                        make_list_of_values_features)
 from machinery.common.utils import CSV_OPTIONS, writerow, flatten_list
 
@@ -534,13 +535,13 @@ def get_features(org_popularity_file, job_words_popularity_file):
         tuple of all candidates feature instances.
     """
     candidates_base_features = candidate_sourcerer_features((
-        AttributeInt("years_experience"),
-        AttributeBool("first_name"),
-        AttributeBool("last_name"),
-        AttributeBool("full_name"),
-        AttributeBool("photo"),
-        AttributeBool("location_display"),
-        AttributeLen("orgs")))
+        DictKeyInt("years_experience"),
+        DictKeyBool("first_name"),
+        DictKeyBool("last_name"),
+        DictKeyBool("full_name"),
+        DictKeyBool("photo"),
+        DictKeyBool("location_display"),
+        DictKeyLen("orgs")))
 
     pr_most_common_features = profile_most_common_features((
         AttributeInt("age"),
