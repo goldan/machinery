@@ -33,7 +33,8 @@ def train_and_evaluate_classifier(options):
         options['features']['scaling'], options['random_state'])
 
     classifier = get_classifier(options['classifier']['name'],
-                                options['classifier']['config'].get('init', {}))
+                                options['classifier']['config'].get('init', {}),
+                                options['verbose'])
 
     grid = options['classifier']['config'].get('grid', {})
     classifier, grid_size, train_time = train_classifier(
@@ -86,12 +87,13 @@ def prepare_data(x_train_filename, y_train_filename, x_test_filename, y_test_fil
     return X_train, X_test, y_train, y_test, feature_names
 
 
-def get_classifier(name, config_dict):
+def get_classifier(name, config_dict, verbose):
     """Get classifier instance a configuration dict.
 
     Args:
         name: module and class name of the classifier, in dot notation.
         config_dict: configuration dict used in classifier instance constructor.
+        verbose: if True, init classifier with verbose=True.
 
     Returns:
         classifier instance.
@@ -100,6 +102,11 @@ def get_classifier(name, config_dict):
     class_name = name.split('.')[-1]
     module = import_module(module_name)
     classifier_class = getattr(module, class_name)
+    if 'kernel' in config_dict:
+        # svm.SVC does not like unicode value of kernel, requires str
+        config_dict['kernel'] = str(config_dict['kernel'])
+    if verbose:
+        config_dict['verbose'] = True
     return classifier_class(**config_dict)
 
 
