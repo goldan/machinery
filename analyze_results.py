@@ -2,21 +2,28 @@
 u"""Print experiments results stored in MongoDB.
 
 Usage:
-    analyze_results.py <db_name>
+    analyze_results.py list <db_name> [--sort=(score|name|state|date) -r]
     analyze_results.py diff <db_name> <id1> <id2>
-    analyze_results.py features <features.csv> <output_file>
     analyze_results.py show <db_name> <experiment_id> <key>
+    analyze_results.py features <features.csv> <output_file>
+
+Commands:
+    list: print table with experiments.
+    diff: print diff between two experiments with <id1> and <id2>.
+    show: print experiment with <experiment_id> dict <key> value.
+    features: print features value counts to <output_file>.
 
 Options:
- -h --help              Show this screen.
- --version              Show Version.
- <db_name>              Mongo database name where the results are stored.
- default action: print table with results.
- diff: print diff between two experiments with <id1> and <id2>.
- features: print features value counts to <output_file>.
- show: print experiment (found by <experiment_id> in <db_name>) dict <key> value.
+    -h --help                       Show this screen.
+    --Version                       Show Version.
+    <db_name>                       Mongo database name where the results are stored.
+    --sort=(score|name|state|date)  Sort table by respective column.
+    -r                              Reverse sort order
+                                    (by default, some sort values (score) have ascending order,
+                                    some (name) have descending)
 """
 import sys
+from collections import namedtuple
 
 import pandas
 from deepdiff import DeepDiff
@@ -47,7 +54,7 @@ def get_experiments(db_name, ids=None, from_time=100000):
             any(str(exp['_id']).startswith(pk) for pk in ids)]
 
 
-def analyze_results(db_name, experiment_ids=None):
+def analyze_results(db_name, experiment_ids=None, sort_by='score', reverse=False):
     """Print table with experiment results stored in MongoDB.
 
     Experiments are sorted by accuracy score reversed.
@@ -55,21 +62,37 @@ def analyze_results(db_name, experiment_ids=None):
     Args:
         db_name: database name to connect to.
         experiment_ids: (optional) iterable of ids to filter results by.
+        sort_by: sort by column name.
+        reverse: if True, reverse default sort order.
     """
+    if not sort_by:  # it can be None if not specified in CLI
+        sort_by = 'score'
     experiments = get_experiments(db_name, experiment_ids)
     headers = ['ID', 'Classifier', 'Scaling', 'Grid size', 'Accuracy', 'Random state', 'Booked at']
 
-    results = sorted([(
-        exp['_id'],
-        exp['classifier']['name'].split('.')[-1],
-        exp['features']['scaling'],
-        exp['results']['grid_size'],
-        str(exp['results']['accuracy']*100) + '%',
-        exp['random_state'],
-        pretty_date(exp['booked_at']))
-                      for exp in experiments],
-                     key=lambda row: float(row[4].strip('%')), reverse=True)
-    print tabulate(results, headers)
+    sort_key = {  # sort key row index, default reverse value
+        'score': (4, True),
+        'name': (1, False),
+        'state': (5, False),
+        'date': (6, True)
+    }
+    Row = namedtuple("TableRow", "id, name, scaling, grid_size, score, random_state, booked_at")
+    rows = [Row(exp['_id'],
+                exp['classifier']['name'].split('.')[-1],
+                exp['features']['scaling'],
+                exp['results']['grid_size'],
+                exp['results']['accuracy'],
+                exp['random_state'],
+                exp['booked_at'])
+            for exp in experiments]
+    # first sort, then replace with human-readable values
+    do_reverse = sort_key[sort_by][1]  # default reverse value
+    if reverse:  # if reverse is True, reverse that default reverse value
+        do_reverse = not do_reverse
+    rows.sort(key=lambda row: row[sort_key[sort_by][0]], reverse=do_reverse)
+    rows = [row._replace(score=str(row.score*100)+'%', booked_at=pretty_date(row.booked_at))
+            for row in rows]
+    print tabulate(rows, headers)
 
 
 def prepare_diff_key(key):
@@ -117,7 +140,7 @@ def diff_experiments(db_name, id1, id2):
     Raises:
         Exception if more or less than 2 experiments were found by ids.
     """
-    analyze_results(db_name, (id1, id2))
+    analyze_results(db_name, experiment_ids=(id1, id2))
     experiments = get_experiments(db_name, (id1, id2))
     if len(experiments) < 2:
         raise Exception("No experiments with given ids")
@@ -224,14 +247,15 @@ def show_experiment(db_name, experiment_id, key):
 def main():
     """Select the action from command line and execute the function."""
     options = docopt(__doc__)
-    if options["diff"]:
+    if options["list"]:
+        analyze_results(options["<db_name>"], sort_by=options["--sort"],
+                        reverse=options['-r'])
+    elif options["diff"]:
         diff_experiments(options["<db_name>"], options["<id1>"], options["<id2>"])
     elif options["features"]:
         analyze_features(options["<features.csv>"], options["<output_file>"])
     elif options["show"]:
         show_experiment(options["<db_name>"], options["<experiment_id>"], options["<key>"])
-    else:
-        analyze_results(options["<db_name>"])
 
 
 if __name__ == "__main__":
