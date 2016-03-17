@@ -4,7 +4,7 @@ u"""Print experiments results stored in MongoDB.
 Usage:
     analyze_results.py list <db_name> [--sort=(score|name|state|date) -r]
     analyze_results.py diff <db_name> <id1> <id2>
-    analyze_results.py show <db_name> <experiment_id> <key>
+    analyze_results.py show <db_name> <experiment_id> [<key>]
     analyze_results.py features <features.csv> <output_file>
 
 Commands:
@@ -237,6 +237,7 @@ def show_experiment(db_name, experiment_id, key):
         key: key of experiment dict in database to print contains of.
             Key can be nested, subkeys are separated by ".".
     """
+    key = key or "results"  # default key
     experiment = get_experiments(db_name, [experiment_id])[0]
     value = experiment
     for subkey in key.split("."):
