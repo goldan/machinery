@@ -79,14 +79,15 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'class_weight': ('balanced', None)
             }
         },
-        'svm.SVC': {  # attributes: coef_ (for linear kernel)
+        'svm.SVC': {  # no attributes
             'init': {
-                'random_state': random_state,
-                'kernel': str('linear')
+                'random_state': random_state
             },
             'grid': {
                 'C': range(11),
-                'kernel': ('linear', 'poly', 'rbf', 'sigmoid', 'precomputed'),
+                # exclude linear kernel, because we have LinearSVC, and
+                # for SVC linear kernel is very slow
+                'kernel': ('poly', 'rbf', 'sigmoid', 'precomputed'),
                 'shrinking': (True, False),
                 'class_weight': ('balanced', None),
                 'decision_function_shape': ('ovo', 'ovr')
