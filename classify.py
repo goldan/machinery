@@ -48,8 +48,9 @@ def train_and_evaluate_classifier(options):
     results["test_time"] = roundto(test_time)
     results["grid_size"] = grid_size
 
+    classes_names = [name for name, count in options['classes']['train']['names']]
     evaluate(classifier, y_test, y_predicted, feature_names,
-             dict(options['classes']['train']['names']).keys(), results, options['verbose'])
+             classes_names, results, options['verbose'])
     return results
 
 
