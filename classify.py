@@ -194,6 +194,10 @@ def evaluate(classifier, y_test, y_predicted, feature_names, class_names, result
 
     Metrics calculated:
         * accuracy
+        * cohen kappa coefficient
+        * precision, recall and f1-score for each class
+        * average precision, recall and f1-score (average weighted by support)
+        * classes support
         * dimensionality
         * density
         * important features
@@ -214,6 +218,26 @@ def evaluate(classifier, y_test, y_predicted, feature_names, class_names, result
     if verbose:
         print "accuracy:   %0.3f" % score
     results['accuracy'] = roundto(score, 4)
+
+    kappa_score = metrics.cohen_kappa_score(y_test, y_predicted)
+    results['cohen_kappa'] = roundto(kappa_score, 4)
+
+    precisions, recalls, fscores, support = metrics.precision_recall_fscore_support(
+        y_test, y_predicted)
+    results['precisions'] = [roundto(prec, 4) for prec in precisions]
+    results['recalls'] = [roundto(rec, 4) for rec in recalls]
+    results['f1-scores'] = [roundto(fsco, 4) for fsco in fscores]
+    results['support'] = list(support)
+
+    # we choose weighted average as a most reasonable way to average
+    # it is used by sklearn by default in classification report
+    # classes are counted according to their support
+    # see http://scikit-learn.org/stable/modules/model_evaluation.html#from-binary-to-multiclass-and-multilabel
+    precision, recall, fscore, _ = metrics.precision_recall_fscore_support(
+        y_test, y_predicted, average='weighted')
+    results['precision'] = roundto(precision, 4)
+    results['recall'] = roundto(recall, 4)
+    results['f1-score'] = roundto(fscore, 4)
 
     if hasattr(classifier, 'coef_'):
         results['dimensionality'] = classifier.coef_.shape[1]
