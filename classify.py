@@ -153,6 +153,8 @@ def train_classifier(classifier, grid, X_train, y_train, grid_scoring, random_st
     if grid:
         cross_validator = KFold(
             y_train.size, n_folds=10, shuffle=True, random_state=random_state)
+        if grid_scoring == "cohen_kappa":
+            grid_scoring = metrics.make_scorer(metrics.cohen_kappa_score)
         grid_searcher = GridSearchCV(
             classifier, grid, scoring=grid_scoring, cv=cross_validator,
             verbose=True, n_jobs=cpu_count(), error_score=0)

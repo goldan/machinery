@@ -2,7 +2,7 @@
 u"""Make json config file with experiment configuration.
 
 Usage:
-    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json> [--classifier=<classifier>] [-n]
+    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json> [--classifier=<classifier> -n --random-state=<random_state> --grid-scoring=<grid_scoring>]
 
 Arguments:
  <x_train.csv>          Name of csv file with feature values for the training set.
@@ -12,10 +12,12 @@ Arguments:
  <config.json>          Name of json file to write configuration to.
 
 Options:
- -h --help                  Show this screen.
- --version                  Show Version.
- --classifier=<classifier>  Classifier name to use.
- -n                         Disable grid hyperparameter search.
+ -h --help                      Show this screen.
+ --version                      Show Version.
+ --classifier=<classifier>      Classifier name to use.
+ -n                             Disable grid hyperparameter search.
+ --random-state=<random_state>  Use preselected random state.
+ --grid-scoring=<grid_scoring>  Grid hyperparameter set evaluation method. Examples: f1_weighted, accuracy, cohen_cappa.
 """
 import json
 import random
@@ -182,7 +184,8 @@ def make_config(options):
     Args:
         options: CLI options dict.
     """
-    random_state = random.randint(0, 1000000)
+    random_state = int(options["--random-state"]) or random.randint(0, 1000000)
+    grid_scoring = options["--grid-scoring"] or "f1_weighted"
     class_names = ('0 Insuff', '1 Junior', '2 Exp-ed', '3 Expert')
     feature_scaling_options = (False, True)
     x_train = pandas.read_csv(options["<x_train.csv>"])
@@ -204,7 +207,7 @@ def make_config(options):
         dct = OrderedDict()
         dct["classifier"] = OrderedDict((
             ("name", classifier),
-            ("grid_scoring", "f1_weighted"),
+            ("grid_scoring", grid_scoring),
             ("config", classifiers[classifier])))
         dct["classes"] = OrderedDict((
             ("train", OrderedDict((

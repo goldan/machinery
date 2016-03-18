@@ -76,14 +76,15 @@ def analyze_results(db_name, experiment_ids=None, sort_by='f1score', reverse=Fal
     if not sort_by:  # it can be None if not specified in CLI
         sort_by = 'f1score'
     experiments = get_experiments(db_name, experiment_ids)
-    headers = ['#', 'ID', 'Classifier', 'Scaling', 'Grid size',
+    headers = ['#', 'ID', 'Classifier', 'Scaling', 'Grid scoring', 'Grid size',
                'F1-score', 'Precision', 'Recall', 'Accuracy',
-               'Random state', 'Booked at']
-    Row = namedtuple("TableRow", "index, id, name, scaling, grid_size, f1score, precision, recall, accuracy, state, date")
+               'R state', 'Booked at']
+    Row = namedtuple("TableRow", "index, id, name, scaling, grid_scoring, grid_size, f1score, precision, recall, accuracy, state, date")
     rows = [Row(0,
                 exp['_id'],
                 exp['classifier']['name'].split('.')[-1],
                 exp['features']['scaling'],
+                exp['classifier'].get('grid_scoring', 'accuracy'),
                 exp['results']['grid_size'],
                 exp['results']['f1-score'],
                 exp['results']['precision'],
