@@ -2,7 +2,7 @@
 u"""Print experiments results stored in MongoDB.
 
 Usage:
-    analyze_results.py list <db_name> [--sort=(accuracy|precision|recall|f1score|name|state|date) -r]
+    analyze_results.py list <db_name> [--sort=(accuracy|precision|recall|f1score|name|state|date) -r --limit=<limit>]
     analyze_results.py diff <db_name> <id1> <id2>
     analyze_results.py show <db_name> <experiment_id> [<key>]
     analyze_results.py features <features.csv> <output_file>
@@ -21,6 +21,7 @@ Options:
     -r                                                          Reverse sort order
                                                                 (by default, some sort values (score) have ascending order,
                                                                 some (name) have descending)
+    --limit=<limit>                                             Limit number of experiments to show.
 """
 import sys
 from collections import namedtuple
@@ -59,19 +60,20 @@ def percent_to_str(float_value):
     return str(float_value*100) + '%'
 
 
-def analyze_results(db_name, experiment_ids=None, sort_by='score', reverse=False):
+def analyze_results(db_name, experiment_ids=None, sort_by='f1score', reverse=False, limit=None):
     """Print table with experiment results stored in MongoDB.
 
-    Experiments are sorted by accuracy score reversed.
+    Experiments are sorted by f1score reversed.
 
     Args:
         db_name: database name to connect to.
         experiment_ids: (optional) iterable of ids to filter results by.
         sort_by: sort by column name.
         reverse: if True, reverse default sort order.
+        limit: limit number of experiments to show.
     """
     if not sort_by:  # it can be None if not specified in CLI
-        sort_by = 'score'
+        sort_by = 'f1score'
     experiments = get_experiments(db_name, experiment_ids)
     headers = ['ID', 'Classifier', 'Scaling', 'Grid size',
                'F1-score', 'Precision', 'Recall', 'Accuracy',
@@ -93,6 +95,8 @@ def analyze_results(db_name, experiment_ids=None, sort_by='score', reverse=False
     if reverse:  # if reverse is True, reverse that default reverse value
         do_reverse = not do_reverse
     rows.sort(key=lambda row: (getattr(row, sort_by), row.f1score), reverse=do_reverse)
+    if limit:
+        rows = rows[:int(limit)]
     rows = [row._replace(
         accuracy=percent_to_str(row.accuracy),
         precision=percent_to_str(row.precision),
@@ -305,7 +309,7 @@ def main():
     options = docopt(__doc__)
     if options["list"]:
         analyze_results(options["<db_name>"], sort_by=options["--sort"],
-                        reverse=options['-r'])
+                        reverse=options['-r'], limit=options['--limit'])
     elif options["diff"]:
         diff_experiments(options["<db_name>"], options["<id1>"], options["<id2>"])
     elif options["features"]:
