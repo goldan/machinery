@@ -75,11 +75,12 @@ def analyze_results(db_name, experiment_ids=None, sort_by='f1score', reverse=Fal
     if not sort_by:  # it can be None if not specified in CLI
         sort_by = 'f1score'
     experiments = get_experiments(db_name, experiment_ids)
-    headers = ['ID', 'Classifier', 'Scaling', 'Grid size',
+    headers = ['#', 'ID', 'Classifier', 'Scaling', 'Grid size',
                'F1-score', 'Precision', 'Recall', 'Accuracy',
                'Random state', 'Booked at']
-    Row = namedtuple("TableRow", "id, name, scaling, grid_size, f1score, precision, recall, accuracy, state, date")
-    rows = [Row(exp['_id'],
+    Row = namedtuple("TableRow", "index, id, name, scaling, grid_size, f1score, precision, recall, accuracy, state, date")
+    rows = [Row(0,
+                exp['_id'],
                 exp['classifier']['name'].split('.')[-1],
                 exp['features']['scaling'],
                 exp['results']['grid_size'],
@@ -98,12 +99,13 @@ def analyze_results(db_name, experiment_ids=None, sort_by='f1score', reverse=Fal
     if limit:
         rows = rows[:int(limit)]
     rows = [row._replace(
+        index=i,
         accuracy=percent_to_str(row.accuracy),
         precision=percent_to_str(row.precision),
         recall=percent_to_str(row.recall),
         f1score=percent_to_str(row.f1score),
         date=pretty_date(row.date))
-            for row in rows]
+            for i, row in enumerate(rows, start=1)]
     print tabulate(rows, headers)
 
 
