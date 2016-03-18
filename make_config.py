@@ -2,7 +2,7 @@
 u"""Make json config file with experiment configuration.
 
 Usage:
-    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json> [--classifier=<classifier> -n --random-state=<random_state> --grid-scoring=<grid_scoring>]
+    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json> [--classifier=<classifier> -n --random-state=<random_state> --grid-scoring=<grid_scoring> --scaling=<scaling>]
 
 Arguments:
  <x_train.csv>          Name of csv file with feature values for the training set.
@@ -18,6 +18,7 @@ Options:
  -n                             Disable grid hyperparameter search.
  --random-state=<random_state>  Use preselected random state.
  --grid-scoring=<grid_scoring>  Grid hyperparameter set evaluation method. Examples: f1_weighted, accuracy, cohen_cappa.
+ --scaling=<scaling>            Use specific value for feature scaling (instead of setting both True and False).
 """
 import json
 import random
@@ -193,8 +194,10 @@ def make_config(options):
         grid_scoring_options = ("f1_weighted",)
     else:
         grid_scoring_options = ("f1_weighted", "cohen_cappa", "accuracy")
+    scaling = options["--scaling"]
+    feature_scaling_options = (bool(scaling),) if scaling is not None else (False, True)
+
     class_names = ('0 Insuff', '1 Junior', '2 Exp-ed', '3 Expert')
-    feature_scaling_options = (False, True)
     x_train = pandas.read_csv(options["<x_train.csv>"])
     y_train = pandas.read_csv(options["<y_train.csv>"])
     y_test = pandas.read_csv(options["<y_test.csv>"])
