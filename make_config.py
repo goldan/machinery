@@ -184,7 +184,7 @@ def make_config(options):
     Args:
         options: CLI options dict.
     """
-    random_state = int(options["--random-state"]) or random.randint(0, 1000000)
+    random_state = int(options["--random-state"] or random.randint(0, 1000000))
     skip_grid = options["-n"]
     grid_scoring = options["--grid-scoring"]
     if grid_scoring:
@@ -212,6 +212,12 @@ def make_config(options):
     config = []
     for classifier, scaling, grid_scoring in product(
             classifiers, feature_scaling_options, grid_scoring_options):
+        if not classifiers[classifier].get('grid') \
+                and grid_scoring != grid_scoring_options[0]:
+            # if the classifier has no grid, we don't make configs
+            # for non-first grid_scoring_options, because they will produce the same results,
+            # because if there is no grid, grid scoring option does not make difference.
+            continue
         dct = OrderedDict()
         dct["classifier"] = OrderedDict((
             ("name", classifier),
