@@ -185,7 +185,9 @@ def make_config(options):
         options: CLI options dict.
     """
     random_state = int(options["--random-state"]) or random.randint(0, 1000000)
-    grid_scoring = options["--grid-scoring"] or "f1_weighted"
+    grid_scoring = options["--grid-scoring"]
+    grid_scoring_options = (grid_scoring,) if grid_scoring \
+        else ("f1_weighted", "cohen_cappa", "accuracy")
     class_names = ('0 Insuff', '1 Junior', '2 Exp-ed', '3 Expert')
     feature_scaling_options = (False, True)
     x_train = pandas.read_csv(options["<x_train.csv>"])
@@ -203,7 +205,8 @@ def make_config(options):
 
     classifiers = classifiers_config(random_state, options["--classifier"], options["-n"])
     config = []
-    for classifier, scaling in product(classifiers, feature_scaling_options):
+    for classifier, scaling, grid_scoring in product(
+            classifiers, feature_scaling_options, grid_scoring_options):
         dct = OrderedDict()
         dct["classifier"] = OrderedDict((
             ("name", classifier),
