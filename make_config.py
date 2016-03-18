@@ -67,7 +67,8 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'weights': ('uniform', 'distance'),
                 'algorithm': ('auto', 'ball_tree', 'kd_tree', 'brute'),
                 'p': range(1, 11)
-            }
+            },
+            'scaling': False,
         },
         'svm.LinearSVC': {  # attributes: coef_
             'init': {
@@ -220,6 +221,11 @@ def make_config(options):
             # if the classifier has no grid, we don't make configs
             # for non-first grid_scoring_options, because they will produce the same results,
             # because if there is no grid, grid scoring option does not make difference.
+            continue
+        classifier_scaling = classifiers[classifier].get('scaling')
+        if classifier_scaling is not None and scaling != classifier_scaling:
+            # if there is specific classifier scaling setting, use it always
+            # and skip other options
             continue
         dct = OrderedDict()
         dct["classifier"] = OrderedDict((
