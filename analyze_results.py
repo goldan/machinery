@@ -2,7 +2,7 @@
 u"""Print experiments results stored in MongoDB.
 
 Usage:
-    analyze_results.py list <db_name> [--sort=(score|name|state|date) -r]
+    analyze_results.py list <db_name> [--sort=(accuracy|precision|recall|f1score|name|state|date) -r]
     analyze_results.py diff <db_name> <id1> <id2>
     analyze_results.py show <db_name> <experiment_id> [<key>]
     analyze_results.py features <features.csv> <output_file>
@@ -14,13 +14,13 @@ Commands:
     features: print features value counts to <output_file>.
 
 Options:
-    -h --help                       Show this screen.
-    --Version                       Show Version.
-    <db_name>                       Mongo database name where the results are stored.
-    --sort=(score|name|state|date)  Sort table by respective column.
-    -r                              Reverse sort order
-                                    (by default, some sort values (score) have ascending order,
-                                    some (name) have descending)
+    -h --help                                                   Show this screen.
+    --Version                                                   Show Version.
+    <db_name>                                                   Mongo database name where the results are stored.
+    --sort=(accuracy|precision|recall|f1score|name|state|date)  Sort table by respective column.
+    -r                                                          Reverse sort order
+                                                                (by default, some sort values (score) have ascending order,
+                                                                some (name) have descending)
 """
 import sys
 from collections import namedtuple
@@ -54,6 +54,11 @@ def get_experiments(db_name, ids=None, from_time=100000):
             any(str(exp['_id']).startswith(pk) for pk in ids)]
 
 
+def percent_to_str(float_value):
+    """Get a float value and convert it to percentage string."""
+    return str(float_value*100) + '%'
+
+
 def analyze_results(db_name, experiment_ids=None, sort_by='score', reverse=False):
     """Print table with experiment results stored in MongoDB.
 
@@ -68,29 +73,32 @@ def analyze_results(db_name, experiment_ids=None, sort_by='score', reverse=False
     if not sort_by:  # it can be None if not specified in CLI
         sort_by = 'score'
     experiments = get_experiments(db_name, experiment_ids)
-    headers = ['ID', 'Classifier', 'Scaling', 'Grid size', 'Accuracy', 'Random state', 'Booked at']
-
-    sort_key = {  # sort key row index, default reverse value
-        'score': (4, True),
-        'name': (1, False),
-        'state': (5, False),
-        'date': (6, True)
-    }
-    Row = namedtuple("TableRow", "id, name, scaling, grid_size, score, random_state, booked_at")
+    headers = ['ID', 'Classifier', 'Scaling', 'Grid size',
+               'F1-score', 'Precision', 'Recall', 'Accuracy',
+               'Random state', 'Booked at']
+    Row = namedtuple("TableRow", "id, name, scaling, grid_size, f1score, precision, recall, accuracy, state, date")
     rows = [Row(exp['_id'],
                 exp['classifier']['name'].split('.')[-1],
                 exp['features']['scaling'],
                 exp['results']['grid_size'],
+                exp['results']['f1-score'],
+                exp['results']['precision'],
+                exp['results']['recall'],
                 exp['results']['accuracy'],
                 exp['random_state'],
                 exp['booked_at'])
             for exp in experiments]
     # first sort, then replace with human-readable values
-    do_reverse = sort_key[sort_by][1]  # default reverse value
+    do_reverse = False if sort_by in ['name', 'state'] else True
     if reverse:  # if reverse is True, reverse that default reverse value
         do_reverse = not do_reverse
-    rows.sort(key=lambda row: (row[sort_key[sort_by][0]], row[4]), reverse=do_reverse)
-    rows = [row._replace(score=str(row.score*100)+'%', booked_at=pretty_date(row.booked_at))
+    rows.sort(key=lambda row: (getattr(row, sort_by), row.f1score), reverse=do_reverse)
+    rows = [row._replace(
+        accuracy=percent_to_str(row.accuracy),
+        precision=percent_to_str(row.precision),
+        recall=percent_to_str(row.recall),
+        f1score=percent_to_str(row.f1score),
+        date=pretty_date(row.date))
             for row in rows]
     print tabulate(rows, headers)
 
