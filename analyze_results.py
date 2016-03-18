@@ -4,7 +4,7 @@ u"""Print experiments results stored in MongoDB.
 Usage:
     analyze_results.py list <db_name> [--sort=(accuracy|precision|recall|f1score|name|state|date) -r --limit=<limit>]
     analyze_results.py diff <db_name> <id1> <id2>
-    analyze_results.py show <db_name> <experiment_id> [<key>]
+    analyze_results.py show <db_name> <experiment_id> [<key> --list-limit=<list_limit>]
     analyze_results.py features <features.csv> <output_file>
 
 Commands:
@@ -22,6 +22,7 @@ Options:
                                                                 (by default, some sort values (score) have ascending order,
                                                                 some (name) have descending)
     --limit=<limit>                                             Limit number of experiments to show.
+    --list-limit=<list_limit>                                   Limit number of items to show for list values.
 """
 import sys
 from collections import namedtuple
@@ -257,7 +258,7 @@ def truncate_lines(value, limit=100):
     return "\n".join(line[:limit] for line in str(value).split("\n"))
 
 
-def print_value(value):
+def print_value(value, list_limit):
     """Smart tabular print of values, which can be dictionaries.
 
     If value is not a dictionary, just print it in a table.
@@ -266,6 +267,7 @@ def print_value(value):
 
     Args:
         value: value to print.
+        list_limit: limit number of items to show for list values.
     """
     def _print_value(table, value, prefix=""):
         """Add row of value to a table, or call the function recursively.
@@ -280,6 +282,9 @@ def print_value(value):
         if isinstance(value, dict):
             for key, subvalue in value.items():
                 _print_value(table, subvalue, (prefix+"." if prefix else "")+key)
+        elif isinstance(value, list) and len(value) > list_limit:
+            for i, item in enumerate(value[:list_limit], start=1):
+                table.add_row([prefix+"."+str(i), truncate_lines(item)])
         else:
             table.add_row([prefix, truncate_lines(value)])
     table = PrettyTable()
@@ -289,7 +294,7 @@ def print_value(value):
     print table
 
 
-def show_experiment(db_name, experiment_id, key):
+def show_experiment(db_name, experiment_id, key, list_limit=None):
     """Print experiment dict values by key (dotted notation).
 
     Args:
@@ -297,13 +302,16 @@ def show_experiment(db_name, experiment_id, key):
         experiment_id: id of experiment to print values for.
         key: key of experiment dict in database to print contains of.
             Key can be nested, subkeys are separated by ".".
+        list_limit: limit number of items to show for list values.
     """
+    # because if it is not set in CLI, it's passed as None
+    list_limit = int(list_limit) if list_limit else 10
     key = key or "results"  # default key
     experiment = get_experiments(db_name, [experiment_id])[0]
     value = experiment
     for subkey in key.split("."):
         value = value[subkey]
-    print_value(value)
+    print_value(value, list_limit=list_limit)
 
 
 def main():
@@ -317,7 +325,8 @@ def main():
     elif options["features"]:
         analyze_features(options["<features.csv>"], options["<output_file>"])
     elif options["show"]:
-        show_experiment(options["<db_name>"], options["<experiment_id>"], options["<key>"])
+        show_experiment(options["<db_name>"], options["<experiment_id>"],
+                        options["<key>"], options["--list-limit"])
 
 
 if __name__ == "__main__":
