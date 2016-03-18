@@ -39,6 +39,7 @@ def train_and_evaluate_classifier(options):
     grid = options['classifier']['config'].get('grid', {})
     classifier, grid_size, train_time = train_classifier(
         classifier, grid, X_train, y_train,
+        options['classifier']['grid_scoring'],
         options['random_state'], options['verbose'])
 
     y_predicted, test_time = predict(classifier, X_test, options['verbose'])
@@ -114,7 +115,7 @@ def get_classifier(name, config_dict, verbose):
     return classifier_class(**config_dict)
 
 
-def train_classifier(classifier, grid, X_train, y_train, random_state, verbose):
+def train_classifier(classifier, grid, X_train, y_train, grid_scoring, random_state, verbose):
     """Train classifier using training data.
 
     If grid is provided, use GridSearchCV to find the best hyperparameters
@@ -131,6 +132,8 @@ def train_classifier(classifier, grid, X_train, y_train, random_state, verbose):
         grid: dict of grid params to select the best combination.
         X_train: matrix of training data, (training examples x feature values).
         y_train: vector of right answers (classes) for training set.
+        grid_scoring: metrics to optimize in grid search. See
+            http://scikit-learn.org/stable/modules/model_evaluation.html#common-cases-predefined-values
         random_state: random seed value to use for splitting the data
             into training and test sets in model selection folding.
         verbose: if True, print information about training.
@@ -151,7 +154,7 @@ def train_classifier(classifier, grid, X_train, y_train, random_state, verbose):
         cross_validator = KFold(
             y_train.size, n_folds=10, shuffle=True, random_state=random_state)
         grid_searcher = GridSearchCV(
-            classifier, grid, scoring='accuracy', cv=cross_validator,
+            classifier, grid, scoring=grid_scoring, cv=cross_validator,
             verbose=True, n_jobs=cpu_count(), error_score=0)
         # it automatically refits the best classifier
         # to the full train set. So it's ready to be used to predict.

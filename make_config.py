@@ -204,6 +204,7 @@ def make_config(options):
         dct = OrderedDict()
         dct["classifier"] = OrderedDict((
             ("name", classifier),
+            ("grid_scoring", "f1_weighted"),
             ("config", classifiers[classifier])))
         dct["classes"] = OrderedDict((
             ("train", OrderedDict((
