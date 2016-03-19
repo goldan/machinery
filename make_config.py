@@ -17,7 +17,7 @@ Options:
  --classifier=<classifier>      Classifier name to use.
  -n                             Disable grid hyperparameter search.
  --random-state=<random_state>  Use preselected random state.
- --grid-scoring=<grid_scoring>  Grid hyperparameter set evaluation method. Examples: f1_weighted, accuracy, cohen_cappa.
+ --grid-scoring=<grid_scoring>  Grid hyperparameter set evaluation method. Examples: f1_weighted, accuracy, cohen_kappa.
  --scaling=<scaling>            Use specific value for feature scaling (instead of setting both True and False).
 """
 import json
@@ -194,7 +194,7 @@ def make_config(options):
     elif skip_grid:
         grid_scoring_options = ("f1_weighted",)
     else:
-        grid_scoring_options = ("f1_weighted", "cohen_cappa", "accuracy")
+        grid_scoring_options = ("f1_weighted", "cohen_kappa", "accuracy")
     scaling = options["--scaling"]
     feature_scaling_options = (bool(scaling),) if scaling is not None else (False, True)
 
