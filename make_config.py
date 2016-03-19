@@ -121,7 +121,8 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'bootstrap': (True, False),
                 'oob_score': (True, False),
                 'class_weight': ('balanced', 'balanced_subsample', None),
-            }
+            },
+            'scaling': False,
         },
         'ensemble.AdaBoostClassifier': {  # attributes: feature_importances_
             'init': {
