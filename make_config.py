@@ -68,7 +68,7 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'algorithm': ('auto', 'ball_tree', 'kd_tree', 'brute'),
                 'p': range(1, 11)
             },
-            'scaling': False,
+            'scaling': False,  # it hangs otherwise
         },
         'svm.LinearSVC': {  # attributes: coef_
             'init': {
@@ -108,7 +108,8 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'bootstrap': (True, False),
                 'oob_score': (True, False),
                 'class_weight': ('balanced', 'balanced_subsample', None),
-            }
+            },
+            'scaling': False,  # it hangs otherwise
         },
         'ensemble.ExtraTreesClassifier': {  # attributes: feature_importances_
             'init': {
@@ -122,7 +123,7 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'oob_score': (True, False),
                 'class_weight': ('balanced', 'balanced_subsample', None),
             },
-            'scaling': False,
+            'scaling': False,  # it hangs otherwise
         },
         'ensemble.AdaBoostClassifier': {  # attributes: feature_importances_
             'init': {
@@ -133,7 +134,7 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'learning_rate': [1] + list(linspace(0.1, 10, 21)),
                 'algorithm': ('SAMME', 'SAMME.R'),
             },
-            'scaling': False,
+            'scaling': False,  # it hangs otherwise
         },
         'ensemble.GradientBoostingClassifier': {  # attributes: feature_importances_
             'init': {
