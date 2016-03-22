@@ -9,7 +9,7 @@ from time import time
 import numpy
 import pandas
 from featureforge.experimentation import runner
-from sklearn import cross_validation, metrics
+from sklearn import metrics
 from sklearn.cross_validation import KFold
 from sklearn.grid_search import GridSearchCV
 from sklearn.preprocessing import StandardScaler
@@ -30,7 +30,7 @@ def train_and_evaluate_classifier(options):
     X_train, X_test, y_train, y_test, feature_names = prepare_data(
         options['features']['train_filename'], options['classes']['train']['filename'],
         options['features']['test_filename'], options['classes']['test']['filename'],
-        options['features']['scaling'], options['random_state'])
+        options['features']['scaling'])
 
     classifier = get_classifier(options['classifier']['name'],
                                 options['classifier']['config'].get('init', {}),
@@ -49,26 +49,23 @@ def train_and_evaluate_classifier(options):
     results["test_time"] = roundto(test_time)
     results["grid_size"] = grid_size
 
-    classes_names = [name for name, count in options['classes']['train']['names']]
+    classes_names = [name for name, _ in options['classes']['train']['names']]
     evaluate(classifier, y_test, y_predicted, feature_names,
              classes_names, results, options['verbose'])
     return results
 
 
 def prepare_data(x_train_filename, y_train_filename, x_test_filename, y_test_filename,
-        features_scaling, random_state):
+                 features_scaling):
     """Load training and test sets for classification.
 
     Load features and target classes from csv files.
     If features_scaling is True, scale features to zero mean and standard deviation.
-    Split data to train and test sets (test is 25%), using random_state.
 
     Args:
         features_filename: name of file with feature values.
         features_scaling: if True, scale features before using.
         classes_filename: name of file with assigned classes.
-        random_state: random seed value to use for splitting the data
-            into training and test sets.
 
     Returns:
         tuple (X_train, X_test, y_train, y_test, feature_names)
