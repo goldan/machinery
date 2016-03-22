@@ -1,7 +1,7 @@
 """Run experiments using a json configuration file and store results in MongoDB."""
 import os
 import sys
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 from importlib import import_module
 from multiprocessing import cpu_count
 from time import time
@@ -9,36 +9,13 @@ from time import time
 import numpy
 import pandas
 from featureforge.experimentation import runner
-from sklearn import metrics
+from sklearn import cross_validation, metrics
 from sklearn.cross_validation import KFold
 from sklearn.grid_search import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import density
 
 from machinery.common.utils import roundto
-
-# pylint: disable=invalid-name
-
-
-DatasetFilenames = namedtuple("DatasetFilenames", "X_train, y_train, X_test, y_test")
-
-
-class Dataset(object):
-    """Class representing a classification dataset with training/test data.
-
-    Attributes:
-        X_train: matrix of training data, training examples x feature values.
-        y_train: vector of right answers (classes) for training set.
-        X_test: matrix of test data, test examples x feature values.
-        y_test: vector of right answers (classes) for test set.
-    """
-
-    DSet = namedtuple("DSet", "X, y")
-
-    def __init__(self, X_train, y_train, X_test, y_test):
-        """Create train/test attributes from given values."""
-        self.train = self.DSet(X_train, y_train)
-        self.test = self.DSet(X_test, y_test)
 
 
 def train_and_evaluate_classifier(options):
@@ -50,10 +27,10 @@ def train_and_evaluate_classifier(options):
     Returns:
         results dict with classification evaluation results.
     """
-    dataset_filenames = DatasetFilenames(
+    X_train, X_test, y_train, y_test, feature_names = prepare_data(
         options['features']['train_filename'], options['classes']['train']['filename'],
-        options['features']['test_filename'], options['classes']['test']['filename'])
-    dataset, feature_names = prepare_data(dataset_filenames, options['features']['scaling'])
+        options['features']['test_filename'], options['classes']['test']['filename'],
+        options['features']['scaling'], options['random_state'])
 
     classifier = get_classifier(options['classifier']['name'],
                                 options['classifier']['config'].get('init', {}),
@@ -61,49 +38,58 @@ def train_and_evaluate_classifier(options):
 
     grid = options['classifier']['config'].get('grid', {})
     classifier, grid_size, train_time = train_classifier(
-        classifier, grid, dataset.train,
+        classifier, grid, X_train, y_train,
         options['classifier']['grid_scoring'],
         options['random_state'], options['verbose'])
 
-    y_predicted, test_time = predict(classifier, dataset.test.X, options['verbose'])
+    y_predicted, test_time = predict(classifier, X_test, options['verbose'])
 
     results = OrderedDict()
     results["train_time"] = roundto(train_time)
     results["test_time"] = roundto(test_time)
     results["grid_size"] = grid_size
 
-    classes_names = [name for name, _ in options['classes']['train']['names']]
-    evaluate(classifier, dataset.test.y, y_predicted, feature_names,
+    classes_names = [name for name, count in options['classes']['train']['names']]
+    evaluate(classifier, y_test, y_predicted, feature_names,
              classes_names, results, options['verbose'])
     return results
 
 
-def prepare_data(dataset_filenames, features_scaling):
+def prepare_data(x_train_filename, y_train_filename, x_test_filename, y_test_filename,
+        features_scaling, random_state):
     """Load training and test sets for classification.
 
     Load features and target classes from csv files.
     If features_scaling is True, scale features to zero mean and standard deviation.
+    Split data to train and test sets (test is 25%), using random_state.
 
     Args:
-        dataset_filenames: instance of DatasetFilenames with filenames.
+        features_filename: name of file with feature values.
         features_scaling: if True, scale features before using.
+        classes_filename: name of file with assigned classes.
+        random_state: random seed value to use for splitting the data
+            into training and test sets.
 
     Returns:
-        tuple (dataset, feature_names)
+        tuple (X_train, X_test, y_train, y_test, feature_names)
+            X_train: matrix of training data, training examples x feature values.
+            X_test: matrix of test data, test examples x feature values.
+            y_train: vector of right answers (classes) for training set.
+            y_test: vector of right answers (classes) for test set.
             feature_names: list of names of features.
     """
-    X_train = pandas.read_csv(dataset_filenames.X_train)
+    X_train = pandas.read_csv(x_train_filename)
     feature_names = X_train.columns
-    y_train = numpy.array(pandas.read_csv(dataset_filenames.y_train)).ravel()
-    X_test = pandas.read_csv(dataset_filenames.X_test)
-    y_test = numpy.array(pandas.read_csv(dataset_filenames.y_test)).ravel()
+    y_train = numpy.array(pandas.read_csv(y_train_filename)).ravel()
+    X_test = pandas.read_csv(x_test_filename)
+    y_test = numpy.array(pandas.read_csv(y_test_filename)).ravel()
     if features_scaling:
         # setup scaler only on training set, and then
         # apply both to training and test sets
         scaler = StandardScaler().fit(X_train)
         X_train = scaler.transform(X_train)
         X_test = scaler.transform(X_test)
-    return Dataset(X_train, y_train, X_test, y_test), feature_names
+    return X_train, X_test, y_train, y_test, feature_names
 
 
 def get_classifier(name, config_dict, verbose):
@@ -129,7 +115,7 @@ def get_classifier(name, config_dict, verbose):
     return classifier_class(**config_dict)
 
 
-def train_classifier(classifier, grid, train, grid_scoring, random_state, verbose):
+def train_classifier(classifier, grid, X_train, y_train, grid_scoring, random_state, verbose):
     """Train classifier using training data.
 
     If grid is provided, use GridSearchCV to find the best hyperparameters
@@ -166,7 +152,7 @@ def train_classifier(classifier, grid, train, grid_scoring, random_state, verbos
 
     if grid:
         cross_validator = KFold(
-            train.y.size, n_folds=10, shuffle=True, random_state=random_state)
+            y_train.size, n_folds=10, shuffle=True, random_state=random_state)
         if grid_scoring == "cohen_kappa":
             grid_scoring = metrics.make_scorer(metrics.cohen_kappa_score)
         grid_searcher = GridSearchCV(
@@ -174,10 +160,10 @@ def train_classifier(classifier, grid, train, grid_scoring, random_state, verbos
             verbose=True, n_jobs=cpu_count(), error_score=0)
         # it automatically refits the best classifier
         # to the full train set. So it's ready to be used to predict.
-        best_classifier = grid_searcher.fit(train.X, train.y).best_estimator_
+        best_classifier = grid_searcher.fit(X_train, y_train).best_estimator_
         grid_size = len(grid_searcher.grid_scores_)
     else:
-        classifier.fit(train.X, train.y)
+        classifier.fit(X_train, y_train)
         best_classifier = classifier
         grid_size = 1
 
