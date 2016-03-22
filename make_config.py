@@ -132,7 +132,8 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'n_estimators': range(10, 101, 10),
                 'learning_rate': [1] + list(linspace(0.1, 10, 21)),
                 'algorithm': ('SAMME', 'SAMME.R'),
-            }
+            },
+            'scaling': False,
         },
         'ensemble.GradientBoostingClassifier': {  # attributes: feature_importances_
             'init': {
