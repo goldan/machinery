@@ -104,9 +104,6 @@ def get_classifier(name, config_dict, verbose):
     class_name = name.split('.')[-1]
     module = import_module(module_name)
     classifier_class = getattr(module, class_name)
-    if 'kernel' in config_dict:
-        # svm.SVC does not like unicode value of kernel, requires str
-        config_dict['kernel'] = str(config_dict['kernel'])
     if verbose:
         config_dict['verbose'] = True
     return classifier_class(**config_dict)
@@ -152,6 +149,9 @@ def train_classifier(classifier, grid, X_train, y_train, grid_scoring, random_st
             y_train.size, n_folds=10, shuffle=True, random_state=random_state)
         if grid_scoring == "cohen_kappa":
             grid_scoring = metrics.make_scorer(metrics.cohen_kappa_score)
+        if 'kernel' in grid:
+            # svm.SVC does not like unicode value of kernel, requires str
+            grid['kernel'] = str(grid['kernel'])
         grid_searcher = GridSearchCV(
             classifier, grid, scoring=grid_scoring, cv=cross_validator,
             verbose=True, n_jobs=cpu_count(), error_score=0)

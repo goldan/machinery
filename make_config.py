@@ -81,7 +81,8 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'dual': (True, False),
                 'multi_class': ('ovr', 'crammer_singer'),
                 'class_weight': ('balanced', None)
-            }
+            },
+            'scaling': False,  # it hangs otherwise
         },
         'svm.SVC': {  # no attributes
             'init': {
@@ -151,7 +152,8 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'subsample': [0.1, 0.5, 1],
                 # 'subsample': list(linspace(0.1, 1, 6)),
                 'max_features': ('auto', 'sqrt', 'log2', None),
-            }
+            },
+            'scaling': False,  # it hangs otherwise
         },
         'naive_bayes.GaussianNB': {},  # no attributes
         'discriminant_analysis.LinearDiscriminantAnalysis': {  # attributes: coef_
