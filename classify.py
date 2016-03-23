@@ -151,7 +151,7 @@ def train_classifier(classifier, grid, X_train, y_train, grid_scoring, random_st
             grid_scoring = metrics.make_scorer(metrics.cohen_kappa_score)
         if 'kernel' in grid:
             # svm.SVC does not like unicode value of kernel, requires str
-            grid['kernel'] = str(grid['kernel'])
+            grid['kernel'] = [str(elem) for elem in grid['kernel']]
         grid_searcher = GridSearchCV(
             classifier, grid, scoring=grid_scoring, cv=cross_validator,
             verbose=True, n_jobs=cpu_count(), error_score=0)

@@ -92,7 +92,7 @@ def classifiers_config(random_state, classifier_name=None, skip_grid=False):
                 'C': range(11),
                 # exclude linear kernel, because we have LinearSVC, and
                 # for SVC linear kernel is very slow
-                'kernel': ('poly', 'rbf', 'sigmoid', 'precomputed'),
+                'kernel': ('poly', 'rbf', 'sigmoid'),
                 'shrinking': (True, False),
                 'class_weight': ('balanced', None),
                 'decision_function_shape': ('ovo', 'ovr')
