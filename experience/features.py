@@ -9,6 +9,8 @@ from collections import OrderedDict, Counter
 from itertools import product
 from types import MethodType
 
+from fannypack.csv_utils import CSV_OPTIONS, writerow
+from fannypack.lists import flatten_list
 from featureforge.vectorizer import Vectorizer
 import nltk
 from nltk.corpus import stopwords
@@ -22,7 +24,6 @@ from machinery.common.features import (AttributeBool, AttributeInt,
                                        DictKeyLen, ListFeature, SetFeature,
                                        SubAttributeSet,
                                        make_list_of_values_features)
-from machinery.common.utils import CSV_OPTIONS, writerow, flatten_list
 
 
 class Gender(AttributeBool):

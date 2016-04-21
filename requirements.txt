@@ -10,3 +10,4 @@ scipy  # sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortr
 sklearn
 tabulate
 docopt
+git+ssh://gerrit.trueskills.com:29418/fannypack

@@ -3,9 +3,9 @@ import csv
 import sys
 from argparse import ArgumentParser
 from collections import Counter
+from fannypack.csv_utils import CSV_OPTIONS
 
 from machinery.common.atlas import Candidate
-from machinery.common.utils import CSV_OPTIONS
 from machinery.experience.features import (ProfileJobTitlesWords,
                                            ProfileOrganizationNames)
 
