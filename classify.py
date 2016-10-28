@@ -1,5 +1,6 @@
 """Run experiments using a json configuration file and store results in MongoDB."""
 import os
+import pickle
 import sys
 from collections import OrderedDict
 from importlib import import_module
@@ -42,6 +43,11 @@ def train_and_evaluate_classifier(options):
         options['classifier']['grid_scoring'],
         options['random_state'], options['verbose'])
 
+    classifier_filename = options['classifier'].get('filename')
+    if classifier_filename:
+        with open(classifier_filename, 'wb') as f:
+            pickle.dump(classifier, f)
+
     y_predicted, test_time = predict(classifier, X_test, options['verbose'])
 
     results = OrderedDict()
@@ -75,11 +81,12 @@ def prepare_data(x_train_filename, y_train_filename, x_test_filename, y_test_fil
             y_test: vector of right answers (classes) for test set.
             feature_names: list of names of features.
     """
-    X_train = pandas.read_csv(x_train_filename)
-    feature_names = X_train.columns
-    y_train = numpy.array(pandas.read_csv(y_train_filename)).ravel()
-    X_test = pandas.read_csv(x_test_filename)
-    y_test = numpy.array(pandas.read_csv(y_test_filename)).ravel()
+    df = pandas.read_csv(x_train_filename)
+    feature_names = df.columns
+    X_train = df.as_matrix()
+    y_train = pandas.read_csv(y_train_filename, header=None).ix[:, 0]
+    X_test = pandas.read_csv(x_test_filename).as_matrix()
+    y_test = pandas.read_csv(y_test_filename, header=None).ix[:, 0]
     if features_scaling:
         # setup scaler only on training set, and then
         # apply both to training and test sets
@@ -236,8 +243,9 @@ def evaluate(classifier, y_test, y_predicted, feature_names, class_names, result
     # it is used by sklearn by default in classification report
     # classes are counted according to their support
     # see http://scikit-learn.org/stable/modules/model_evaluation.html#from-binary-to-multiclass-and-multilabel
+    average = 'weighted' if len(class_names) > 2 else 'binary'
     precision, recall, fscore, _ = metrics.precision_recall_fscore_support(
-        y_test, y_predicted, average='weighted')
+        y_test, y_predicted, average=average)
     results['precision'] = roundto(precision, 4)
     results['recall'] = roundto(recall, 4)
     results['f1-score'] = roundto(fscore, 4)

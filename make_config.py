@@ -2,23 +2,25 @@
 u"""Make json config file with experiment configuration.
 
 Usage:
-    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <config.json> [--classifier=<classifier> -n --random-state=<random_state> --grid-scoring=<grid_scoring> --scaling=<scaling>]
+    make_config.py <x_train.csv> <y_train.csv> <x_test.csv> <y_test.csv> <class_names.csv> <config.json> [--classifier=<classifier> --classifier-filename=<classifier-filename> -n --random-state=<random_state> --grid-scoring=<grid_scoring> --scaling=<scaling>]
 
 Arguments:
- <x_train.csv>          Name of csv file with feature values for the training set.
- <y_train.csv>          Name of csv file with target classes values for the training set.
- <x_test.csv>           Name of csv file with feature values for the test set.
- <y_test.csv>           Name of csv file with target classes values for the test set.
+ <x_train.csv>          Name of csv file with feature values for the training set. No index, first row - feature names.
+ <y_train.csv>          Name of csv file with target classes values for the training set. No index, no header.
+ <x_test.csv>           Name of csv file with feature values for the test set. No index, first row - feature names.
+ <y_test.csv>           Name of csv file with target classes values for the test set. No index, no header.
+ <class_names.csv>      Name of csv file with target class names (index=class index, value=class name)
  <config.json>          Name of json file to write configuration to.
 
 Options:
- -h --help                      Show this screen.
- --version                      Show Version.
- --classifier=<classifier>      Classifier name to use.
- -n                             Disable grid hyperparameter search.
- --random-state=<random_state>  Use preselected random state.
- --grid-scoring=<grid_scoring>  Grid hyperparameter set evaluation method. Examples: f1_weighted, accuracy, cohen_kappa.
- --scaling=<scaling>            Use specific value for feature scaling (instead of setting both True and False).
+ -h --help                                      Show this screen.
+ --version                                      Show Version.
+ --classifier=<classifier>                      Classifier name to use.
+ --classifier-filename=<classifier-filename>    Filename to store trained classifier (optional)
+ -n                                             Disable grid hyperparameter search.
+ --random-state=<random_state>                  Use preselected random state.
+ --grid-scoring=<grid_scoring>                  Grid hyperparameter set evaluation method. Examples: f1_weighted, accuracy, cohen_kappa.
+ --scaling=<scaling>                            Use specific value for feature scaling (instead of setting both True and False).
 """
 import json
 import random
@@ -203,18 +205,18 @@ def make_config(options):
     scaling = options["--scaling"]
     feature_scaling_options = (bool(scaling),) if scaling is not None else (False, True)
 
-    class_names = ('0 Insuff', '1 Junior', '2 Exp-ed', '3 Expert')
+    class_names = pandas.read_csv(options['<class_names.csv>']).to_dict()['name']
     x_train = pandas.read_csv(options["<x_train.csv>"])
-    y_train = pandas.read_csv(options["<y_train.csv>"])
-    y_test = pandas.read_csv(options["<y_test.csv>"])
+    y_train = pandas.read_csv(options["<y_train.csv>"], header=None).ix[:, 0]
+    y_test = pandas.read_csv(options["<y_test.csv>"], header=None).ix[:, 0]
     features = x_train.columns
 
     # class_code: number of examples per class, e.g. {0: 10, 1: 20, 2: 35, 3: 12}
-    train_classes_counts_raw = dict(y_train[y_train.columns[0]].value_counts())
+    train_classes_counts_raw = y_train.value_counts().to_dict()
     # class name: number of examples
     train_classes_counts = [(name, train_classes_counts_raw[i])
-                            for i, name in enumerate(class_names)]
-    test_classes_counts_raw = dict(y_test[y_test.columns[0]].value_counts())
+                            for i, name in class_names.items()]
+    test_classes_counts_raw = y_test.value_counts().to_dict()
     test_classes_counts = [(name, test_classes_counts_raw[i]) for i, name in enumerate(class_names)]
 
     classifiers = classifiers_config(random_state, options["--classifier"], skip_grid)
@@ -237,6 +239,8 @@ def make_config(options):
             ("name", classifier),
             ("grid_scoring", grid_scoring),
             ("config", classifiers[classifier])))
+        if options["--classifier-filename"]:
+            dct["classifier"]["filename"] = options["--classifier-filename"]
         dct["classes"] = OrderedDict((
             ("train", OrderedDict((
                 ("names", train_classes_counts),
