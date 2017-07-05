@@ -15,7 +15,6 @@ from sklearn.cross_validation import KFold
 from sklearn.grid_search import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import density
-
 from machinery.common.utils import roundto
 
 
