@@ -1,0 +1,7 @@
+Library for supporting full machine learning experimentation pipeline:
+
+* Make configuration for machine learning algorithms
+* Run the algorithms (e.g. classifiers)
+* Store experiment results in a Mongo database and analyze them in CLI.
+
+Based on FeatureForge library.
